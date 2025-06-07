@@ -13,12 +13,15 @@ class AdminController extends BaseController
     protected $subjectModel;
     protected $examModel;
     protected $examResultModel;
+    protected $db;
+
     public function __construct()
     {
         $this->userModel = new UserModel();
         $this->subjectModel = new SubjectModel();
         $this->examModel = new ExamModel();
         $this->examResultModel = new ExamResultModel();
+        $this->db = \Config\Database::connect();
     }
 
     public function dashboard()
@@ -112,10 +115,10 @@ class AdminController extends BaseController
 
         // Get total count before applying filters
         $totalRecords = $this->userModel->countAllResults(false);
-        
+
         // Get filtered count
         $filteredRecords = $builder->countAllResults(false);
-        
+
         // Get actual data
         $users = $builder->orderBy('created_at', 'DESC')->findAll();
 
@@ -209,73 +212,87 @@ class AdminController extends BaseController
         } else {
             return $this->response->setJSON(['success' => false, 'message' => 'Gagal menghapus user!']);
         }
-    }    /**
+    }
+    /**
      * Export users to Excel
-     */
-    public function exportUsers()
+     */    public function exportUsers()
     {
-        $role = $this->request->getGet('role');
-        $status = $this->request->getGet('status');
+        try {
+            $role = $this->request->getGet('role');
+            $status = $this->request->getGet('status');
 
-        $builder = $this->userModel->select('username, email, full_name, role, is_active, created_at');
+            $builder = $this->userModel->select('username, email, full_name, role, is_active, created_at');
 
-        if ($role && in_array($role, ['admin', 'teacher', 'student'])) {
-            $builder->where('role', $role);
-        }
-
-        if ($status !== '' && $status !== null) {
-            if ($status === 'active') {
-                $builder->where('is_active', 1);
-            } elseif ($status === 'inactive') {
-                $builder->where('is_active', 0);
+            if ($role && in_array($role, ['admin', 'teacher', 'student'])) {
+                $builder->where('role', $role);
             }
+
+            if ($status !== '' && $status !== null) {
+                if ($status === 'active') {
+                    $builder->where('is_active', 1);
+                } elseif ($status === 'inactive') {
+                    $builder->where('is_active', 0);
+                }
+            }
+
+            $users = $builder->orderBy('created_at', 'DESC')->findAll();
+
+            // Load PhpSpreadsheet
+            require_once ROOTPATH . 'vendor/autoload.php';
+
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+
+            // Set headers
+            $headers = ['Username', 'Email', 'Full Name', 'Role', 'Status', 'Created At'];
+            $columnLetter = 'A';
+            foreach ($headers as $header) {
+                $sheet->setCellValue($columnLetter . '1', $header);
+                $sheet->getStyle($columnLetter . '1')->getFont()->setBold(true);
+                $sheet->getColumnDimension($columnLetter)->setAutoSize(true);
+                $columnLetter++;
+            }
+
+            // Add data
+            $row = 2;
+            foreach ($users as $user) {
+                $sheet->setCellValue('A' . $row, $user['username']);
+                $sheet->setCellValue('B' . $row, $user['email']);
+                $sheet->setCellValue('C' . $row, $user['full_name']);
+                $sheet->setCellValue('D' . $row, ucfirst($user['role']));
+                $sheet->setCellValue('E' . $row, $user['is_active'] ? 'Active' : 'Inactive');
+                $sheet->setCellValue('F' . $row, $user['created_at']);
+                $row++;
+            }
+
+            // Style the header row
+            $sheet->getStyle('A1:F1')->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FF4F46E5');
+            $sheet->getStyle('A1:F1')->getFont()->getColor()->setARGB('FFFFFFFF');
+
+            // Set filename
+            $filename = 'users_' . ($role ? $role . '_' : '') . ($status ? $status . '_' : '') . date('Y-m-d_H-i-s') . '.xlsx';
+
+            // Clear any previous output
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+
+            // Set headers for download
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment;filename="' . $filename . '"');
+            header('Cache-Control: max-age=0');
+            header('Pragma: public');
+
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $writer->save('php://output');
+            exit();
+        } catch (\Exception $e) {
+            log_message('error', 'Export users error: ' . $e->getMessage());
+            session()->setFlashdata('error', 'Export failed: ' . $e->getMessage());
+            return redirect()->to('/admin/users');
         }
-
-        $users = $builder->orderBy('created_at', 'DESC')->findAll();
-
-        // Load PhpSpreadsheet
-        require_once APPPATH . '../vendor/autoload.php';
-        
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-
-        // Set headers
-        $headers = ['Username', 'Email', 'Full Name', 'Role', 'Status', 'Created At'];
-        $columnLetter = 'A';
-        foreach ($headers as $header) {
-            $sheet->setCellValue($columnLetter . '1', $header);
-            $sheet->getStyle($columnLetter . '1')->getFont()->setBold(true);
-            $sheet->getColumnDimension($columnLetter)->setAutoSize(true);
-            $columnLetter++;
-        }
-
-        // Add data
-        $row = 2;
-        foreach ($users as $user) {
-            $sheet->setCellValue('A' . $row, $user['username']);
-            $sheet->setCellValue('B' . $row, $user['email']);
-            $sheet->setCellValue('C' . $row, $user['full_name']);
-            $sheet->setCellValue('D' . $row, ucfirst($user['role']));
-            $sheet->setCellValue('E' . $row, $user['is_active'] ? 'Active' : 'Inactive');
-            $sheet->setCellValue('F' . $row, $user['created_at']);
-            $row++;
-        }
-
-        // Style the header row
-        $sheet->getStyle('A1:F1')->getFill()
-            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-            ->getStartColor()->setARGB('FF4F46E5');
-        $sheet->getStyle('A1:F1')->getFont()->getColor()->setARGB('FFFFFFFF');
-
-        // Set filename
-        $filename = 'users_' . ($role ? $role . '_' : '') . ($status ? $status . '_' : '') . date('Y-m-d_H-i-s') . '.xlsx';
-
-        // Set headers for download
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-        $writer->save('php://output');
-        exit();
     }
 
     /**
@@ -392,21 +409,167 @@ class AdminController extends BaseController
                 return $this->response->setJSON(['success' => false, 'message' => 'Invalid action!']);
         }
         return $this->response->setJSON(['success' => true, 'message' => $message]);
-    }
-
-    // ========================================
+    }    // ========================================
     // SUBJECT MANAGEMENT SECTION
     // ========================================
     public function subjects()
     {
+        $search = $this->request->getGet('search') ?? '';
+        $teacherFilter = $this->request->getGet('teacher_id') ?? '';
+        $sortBy = $this->request->getGet('sort_by') ?? 'created_at';
+        $sortOrder = $this->request->getGet('sort_order') ?? 'DESC';
+        $page = $this->request->getGet('page') ?? 1;
+        $perPage = 12;        // Build query with filters
+        $builder = $this->subjectModel
+            ->select('
+                subjects.*,
+                users.full_name as teacher_name,
+                users.email as teacher_email,
+                COUNT(DISTINCT exams.id) as exam_count,
+                COUNT(DISTINCT CASE WHEN exams.is_active = 1 THEN exams.id END) as active_exam_count,
+                COUNT(DISTINCT exam_results.student_id) as student_count,
+                AVG(CASE WHEN exam_results.status = "graded" THEN exam_results.percentage END) as average_score
+            ')
+            ->join('users', 'users.id = subjects.teacher_id', 'left')
+            ->join('exams', 'exams.subject_id = subjects.id', 'left')
+            ->join('exam_results', 'exam_results.exam_id = exams.id', 'left')
+            ->groupBy('subjects.id');
+
+        // Apply filters
+        if ($search) {
+            $builder->groupStart()
+                ->like('subjects.name', $search)
+                ->orLike('subjects.code', $search)
+                ->orLike('subjects.description', $search)
+                ->orLike('users.full_name', $search)
+                ->groupEnd();
+        }
+
+        if ($teacherFilter) {
+            $builder->where('subjects.teacher_id', $teacherFilter);
+        }
+
+        // Apply sorting
+        if (in_array($sortBy, ['name', 'code', 'created_at', 'exam_count', 'teacher_name'])) {
+            if ($sortBy === 'exam_count') {
+                $builder->orderBy('COUNT(DISTINCT exams.id)', $sortOrder);
+            } elseif ($sortBy === 'teacher_name') {
+                $builder->orderBy('users.full_name', $sortOrder);
+            } else {
+                $builder->orderBy('subjects.' . $sortBy, $sortOrder);
+            }
+        }
+
+        // Get paginated results
+        $subjects = $builder->paginate($perPage);
+        $pager = $this->subjectModel->pager;
+
+        // Get statistics
+        $totalSubjects = $this->subjectModel->countAllResults(false);
+        $subjectsWithTeacher = $this->subjectModel
+            ->select('subjects.id')
+            ->join('users', 'users.id = subjects.teacher_id', 'inner')
+            ->countAllResults(false);
+        $subjectsWithoutTeacher = $totalSubjects - $subjectsWithTeacher;
+
         $data = [
-            'subjects' => $this->subjectModel->getSubjectsWithTeacher(),
-            'teachers' => $this->userModel->getTeachers()
+            'subjects' => $subjects,
+            'pager' => $pager,
+            'teachers' => $this->userModel->getTeachers(),
+            'search' => $search,
+            'teacherFilter' => $teacherFilter,
+            'sortBy' => $sortBy,
+            'sortOrder' => $sortOrder,
+            'statistics' => [
+                'total' => $totalSubjects,
+                'with_teacher' => $subjectsWithTeacher,
+                'without_teacher' => $subjectsWithoutTeacher,
+                'total_exams' => $this->db->table('exams')->countAllResults(),
+                'active_exams' => $this->db->table('exams')->where('is_active', 1)->countAllResults()
+            ]
         ];
 
         return view('admin/subjects', $data);
     }
 
+    public function getSubjectsData()
+    {
+        $search = $this->request->getGet('search') ?? '';
+        $teacherFilter = $this->request->getGet('teacher_id') ?? '';
+        $builder = $this->subjectModel
+            ->select('
+                subjects.*,
+                users.full_name as teacher_name,
+                users.email as teacher_email,
+                COUNT(DISTINCT exams.id) as exam_count,
+                COUNT(DISTINCT CASE WHEN exams.is_active = 1 THEN exams.id END) as active_exam_count,
+                COUNT(DISTINCT exam_results.student_id) as student_count,
+                AVG(CASE WHEN exam_results.status = "graded" THEN exam_results.percentage END) as average_score
+            ')
+            ->join('users', 'users.id = subjects.teacher_id', 'left')
+            ->join('exams', 'exams.subject_id = subjects.id', 'left')
+            ->join('exam_results', 'exam_results.exam_id = exams.id', 'left')
+            ->groupBy('subjects.id');
+
+        if ($search) {
+            $builder->groupStart()
+                ->like('subjects.name', $search)
+                ->orLike('subjects.code', $search)
+                ->orLike('subjects.description', $search)
+                ->orLike('users.full_name', $search)
+                ->groupEnd();
+        }
+
+        if ($teacherFilter) {
+            $builder->where('subjects.teacher_id', $teacherFilter);
+        }
+
+        $subjects = $builder->orderBy('subjects.created_at', 'DESC')->findAll();
+
+        return $this->response->setJSON([
+            'data' => $subjects,
+            'recordsTotal' => count($subjects),
+            'recordsFiltered' => count($subjects)
+        ]);
+    }
+
+    public function viewSubject($id)
+    {
+        $subject = $this->subjectModel->getSubjectStatistics($id);
+
+        if (!$subject) {
+            throw new \CodeIgniter\Exceptions\PageNotFoundException('Subject not found');
+        }
+
+        // Get recent exams for this subject
+        $recentExams = $this->examModel
+            ->select('exams.*, COUNT(exam_results.id) as participant_count')
+            ->join('exam_results', 'exam_results.exam_id = exams.id', 'left')
+            ->where('exams.subject_id', $id)
+            ->groupBy('exams.id')
+            ->orderBy('exams.created_at', 'DESC')
+            ->limit(10)
+            ->findAll();        // Get top performing students
+        $topStudents = $this->db->table('exam_results er')
+            ->select('u.full_name, u.email, AVG(er.percentage) as avg_score, COUNT(er.id) as exam_count')
+            ->join('users u', 'u.id = er.student_id')
+            ->join('exams e', 'e.id = er.exam_id')
+            ->where('e.subject_id', $id)
+            ->where('er.status', 'graded')
+            ->groupBy('er.student_id')
+            ->orderBy('avg_score', 'DESC')
+            ->limit(10)
+            ->get()
+            ->getResultArray();
+
+        $data = [
+            'subject' => $subject,
+            'recentExams' => $recentExams,
+            'topStudents' => $topStudents
+        ];
+
+        return view('admin/view_subject', $data);
+    }
     public function createSubject()
     {
         if ($this->request->getMethod() === 'POST') {
@@ -417,11 +580,25 @@ class AdminController extends BaseController
                 'teacher_id' => $this->request->getPost('teacher_id') ?: null
             ];
 
-            if ($this->subjectModel->insert($data)) {
+            $result = $this->subjectModel->createSubject($data);
+
+            if ($result['success']) {
                 session()->setFlashdata('success', 'Mata pelajaran berhasil ditambahkan!');
+
+                // Return JSON response for AJAX requests
+                if ($this->request->isAJAX()) {
+                    return $this->response->setJSON(['success' => true, 'message' => 'Subject created successfully!']);
+                }
                 return redirect()->to('/admin/subjects');
             } else {
-                session()->setFlashdata('error', 'Gagal menambahkan mata pelajaran! ' . implode(', ', $this->subjectModel->errors()));
+                $errors = $result['errors'];
+
+                // Return JSON response for AJAX requests
+                if ($this->request->isAJAX()) {
+                    return $this->response->setJSON(['success' => false, 'message' => 'Failed to create subject!', 'errors' => $errors]);
+                }
+
+                session()->setFlashdata('error', 'Gagal menambahkan mata pelajaran! ' . implode(', ', $errors));
                 return redirect()->back()->withInput();
             }
         }
@@ -429,7 +606,6 @@ class AdminController extends BaseController
         $data = ['teachers' => $this->userModel->getTeachers()];
         return view('admin/create_subject', $data);
     }
-
     public function editSubject($id)
     {
         $subject = $this->subjectModel->find($id);
@@ -446,11 +622,25 @@ class AdminController extends BaseController
                 'teacher_id' => $this->request->getPost('teacher_id') ?: null
             ];
 
-            if ($this->subjectModel->update($id, $data)) {
+            $result = $this->subjectModel->updateSubject($id, $data);
+
+            if ($result['success']) {
                 session()->setFlashdata('success', 'Mata pelajaran berhasil diupdate!');
+
+                // Return JSON response for AJAX requests
+                if ($this->request->isAJAX()) {
+                    return $this->response->setJSON(['success' => true, 'message' => 'Subject updated successfully!']);
+                }
                 return redirect()->to('/admin/subjects');
             } else {
-                session()->setFlashdata('error', 'Gagal mengupdate mata pelajaran! ' . implode(', ', $this->subjectModel->errors()));
+                $errors = $result['errors'];
+
+                // Return JSON response for AJAX requests  
+                if ($this->request->isAJAX()) {
+                    return $this->response->setJSON(['success' => false, 'message' => 'Failed to update subject!', 'errors' => $errors]);
+                }
+
+                session()->setFlashdata('error', 'Gagal mengupdate mata pelajaran! ' . implode(', ', $errors));
                 return redirect()->back()->withInput();
             }
         }

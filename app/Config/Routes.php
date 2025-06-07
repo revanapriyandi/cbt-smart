@@ -18,31 +18,36 @@ $routes->post('/register', 'AuthController::register');
 
 // Admin routes
 $routes->group('admin', ['filter' => 'auth:admin'], function ($routes) {
-    $routes->get('dashboard', 'AdminController::dashboard');    // User management - organized routes
-    $routes->get('users', 'AdminController::users');
-    $routes->get('users/create', 'AdminController::createUser');
-    $routes->get('users/edit/(:num)', 'AdminController::editUser/$1');
-    $routes->get('users/import', 'AdminController::importUsers');
+    $routes->get('dashboard', 'AdminController::dashboard');    // User management
+    $routes->get('users/export', 'AdminController::exportUsers');
     $routes->get('users/(:segment)', 'AdminController::users/$1');
+    $routes->get('users', 'AdminController::users');
     $routes->get('users-data', 'AdminController::getUsersData');
     $routes->get('users/get/(:num)', 'AdminController::getUser/$1');
+    $routes->get('create-user', 'AdminController::createUser');
+    $routes->post('create-user', 'AdminController::createUser');
     $routes->post('users/store', 'AdminController::createUser');
+    $routes->get('edit-user/(:num)', 'AdminController::editUser/$1');
+    $routes->post('edit-user/(:num)', 'AdminController::editUser/$1');
     $routes->post('users/update/(:num)', 'AdminController::editUser/$1');
+    $routes->get('delete-user/(:num)', 'AdminController::deleteUser/$1');
     $routes->post('users/delete/(:num)', 'AdminController::deleteUser/$1');
-    $routes->get('users/export', 'AdminController::exportUsers');
     $routes->post('users/import', 'AdminController::importUsers');
     $routes->post('users/bulk-action', 'AdminController::bulkAction');
-    $routes->get('users/sample-csv', 'AdminController::sampleCsv'); // Subject management
+
+    // Subject management
     $routes->get('subjects', 'AdminController::subjects');
+    $routes->get('subjects-data', 'AdminController::getSubjectsData');
     $routes->get('create-subject', 'AdminController::createSubject');
     $routes->post('create-subject', 'AdminController::createSubject');
     $routes->post('subjects/store', 'AdminController::createSubject');
     $routes->get('subjects/get/(:num)', 'AdminController::getSubject/$1');
+    $routes->get('subjects/view/(:num)', 'AdminController::viewSubject/$1');
     $routes->post('subjects/update/(:num)', 'AdminController::editSubject/$1');
     $routes->get('subjects/delete/(:num)', 'AdminController::deleteSubject/$1');
     $routes->get('edit-subject/(:num)', 'AdminController::editSubject/$1');
     $routes->post('edit-subject/(:num)', 'AdminController::editSubject/$1');
-    $routes->get('delete-subject/(:num)', 'AdminController::deleteSubject/$1');    // Exam management
+    $routes->get('delete-subject/(:num)', 'AdminController::deleteSubject/$1'); // Exam management
     $routes->get('exams', 'AdminController::exams');
     $routes->get('exams/create', 'AdminController::createExam');
     $routes->post('exams/create', 'AdminController::createExam');
