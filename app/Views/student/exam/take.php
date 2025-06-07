@@ -122,7 +122,7 @@
                 </div>
             </div> <!-- Main Exam Content -->
             <div class="lg:col-span-3 w-full">
-                <form id="examForm" method="POST" action="<?= base_url('student/exam/submit/' . $exam['id']) ?>">
+                <form id="examForm" method="POST" action="<?= base_url('student/submit-exam/' . $exam['id']) ?>">
                     <?php foreach ($questions as $index => $question): ?>
                         <div id="question-<?= $index + 1 ?>" class="question-container bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 <?= $index === 0 ? '' : 'hidden' ?>">
                             <!-- Question Header -->
