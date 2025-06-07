@@ -5,18 +5,21 @@ namespace App\Controllers;
 use App\Libraries\OpenAIService;
 use App\Models\ExamModel;
 use App\Models\ExamResultModel;
+use App\Models\ExamActivityLogModel;
 
 class ApiController extends BaseController
 {
     protected $openAIService;
     protected $examModel;
     protected $examResultModel;
+    protected $activityLogModel;
 
     public function __construct()
     {
         $this->openAIService = new OpenAIService();
         $this->examModel = new ExamModel();
         $this->examResultModel = new ExamResultModel();
+        $this->activityLogModel = new ExamActivityLogModel();
     }
 
     public function parsePdf()
@@ -127,5 +130,27 @@ class ApiController extends BaseController
         } else {
             return sprintf('%d menit', $mins);
         }
+    }
+
+    public function logActivity()
+    {
+        $studentId = session()->get('user_id');
+        $examId = $this->request->getPost('exam_id');
+        $eventType = $this->request->getPost('event_type');
+        $details = $this->request->getPost('details');
+
+        if (!$studentId || !$examId || !$eventType) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Invalid data']);
+        }
+
+        $this->activityLogModel->insert([
+            'exam_id' => $examId,
+            'student_id' => $studentId,
+            'event_type' => $eventType,
+            'details' => $details,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return $this->response->setJSON(['success' => true]);
     }
 }

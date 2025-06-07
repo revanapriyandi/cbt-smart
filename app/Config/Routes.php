@@ -77,4 +77,5 @@ $routes->group('api', function ($routes) {
     $routes->post('parse-pdf', 'ApiController::parsePdf');
     $routes->post('grade-answer', 'ApiController::gradeAnswer');
     $routes->get('exam-time-remaining/(:num)', 'ApiController::getTimeRemaining/$1');
+    $routes->post('log-activity', 'ApiController::logActivity');
 });
