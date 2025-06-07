@@ -263,7 +263,7 @@
 <script>
     let currentQuestion = 1;
     let totalQuestions = <?= count($questions) ?>;
-    let examDuration = <?= $exam['duration'] ?> * 60; // Convert to seconds
+    let examDuration = <?= $exam['duration_minutes'] ?> * 60; // Convert to seconds
     let timeRemaining = examDuration;
     let examTimer;
     let answeredQuestions = new Set(); // Initialize exam
