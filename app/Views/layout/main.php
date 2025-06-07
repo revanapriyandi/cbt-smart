@@ -40,7 +40,6 @@
             }
         }
     </script>
-
     <style>
         @keyframes slideIn {
             from {
@@ -61,80 +60,133 @@
                 opacity: 1;
             }
         }
+
+        /* Responsive spacing adjustments */
+        @media (min-width: 1024px) and (max-width: 1440px) {
+            .main-content {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+
+            .sidebar-nav-item {
+                margin-left: 0.5rem;
+                margin-right: 0.5rem;
+            }
+        }
+
+        /* Extra small laptop screens */
+        @media (min-width: 1024px) and (max-width: 1280px) {
+            .main-content {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+        }
+
+        /* Smooth transitions for sidebar */
+        .sidebar-transition {
+            transition: width 0.3s ease-in-out, margin 0.3s ease-in-out;
+        }
     </style>
 </head>
 
-<body class="bg-gray-50" x-data="{ sidebarOpen: false, sidebarCollapsed: false }">
-    <!-- Sidebar -->
+<body class="bg-gray-50" x-data="{ sidebarOpen: false, sidebarCollapsed: false }"> <!-- Sidebar -->
     <nav class="fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out bg-gradient-to-br from-primary-500 to-secondary-500 text-white lg:translate-x-0"
         :class="{ 
             '-translate-x-full': !sidebarOpen && window.innerWidth < 1024, 
-            'w-64': !sidebarCollapsed,
-            'w-20': sidebarCollapsed && window.innerWidth >= 1024,
-            'w-64': window.innerWidth < 1024
+            'w-72': !sidebarCollapsed && window.innerWidth >= 1024,
+            'w-64': !sidebarCollapsed && window.innerWidth < 1024,
+            'w-16': sidebarCollapsed && window.innerWidth >= 1024
         }">
-
-        <div class="p-4">
-            <h4 class="text-center text-xl font-bold mb-6">
-                <i class="fas fa-graduation-cap mr-2"></i>
+        <div class="p-4" :class="{ 'px-2': sidebarCollapsed && window.innerWidth >= 1024 }">
+            <h4 class="text-xl font-bold mb-6" :class="{ 'text-center': !sidebarCollapsed || window.innerWidth < 1024, 'text-center': sidebarCollapsed && window.innerWidth >= 1024 }">
+                <i class="fas fa-graduation-cap" :class="{ 'mr-2': !sidebarCollapsed || window.innerWidth < 1024 }"></i>
                 <span x-show="!sidebarCollapsed || window.innerWidth < 1024">CBT Smart</span>
             </h4>
         </div>
         <nav class="mt-6">
-            <?php if (session()->get('role') === 'admin'): ?>
-                <a href="/admin/dashboard"
-                    class="flex items-center px-4 py-3 mx-3 mb-2 rounded-lg transition-colors duration-200 hover:bg-white hover:bg-opacity-10 <?= uri_string() === 'admin/dashboard' ? 'bg-white bg-opacity-20' : '' ?>">
-                    <i class="fas fa-tachometer-alt w-6 text-center"></i>
+            <?php if (session()->get('role') === 'admin'): ?> <a href="/admin/dashboard"
+                    class="sidebar-nav-item flex items-center py-3 mb-2 rounded-lg transition-colors duration-200 hover:bg-white hover:bg-opacity-10 <?= uri_string() === 'admin/dashboard' ? 'bg-white bg-opacity-20' : '' ?>"
+                    :class="{ 
+                        'justify-center px-2 mx-2': sidebarCollapsed && window.innerWidth >= 1024,
+                        'px-4 mx-3': !sidebarCollapsed || window.innerWidth < 1024
+                    }">
+                    <i class="fas fa-tachometer-alt text-center" :class="{ 'w-6': !sidebarCollapsed || window.innerWidth < 1024, 'w-5': sidebarCollapsed && window.innerWidth >= 1024 }"></i>
                     <span x-show="!sidebarCollapsed || window.innerWidth < 1024" class="ml-3">Dashboard</span>
-                </a>
-                <a href="/admin/users"
-                    class="flex items-center px-4 py-3 mx-3 mb-2 rounded-lg transition-colors duration-200 hover:bg-white hover:bg-opacity-10 <?= strpos(uri_string(), 'admin/users') === 0 ? 'bg-white bg-opacity-20' : '' ?>">
-                    <i class="fas fa-users w-6 text-center"></i>
+                </a> <a href="/admin/users"
+                    class="sidebar-nav-item flex items-center py-3 mb-2 rounded-lg transition-colors duration-200 hover:bg-white hover:bg-opacity-10 <?= strpos(uri_string(), 'admin/users') === 0 ? 'bg-white bg-opacity-20' : '' ?>"
+                    :class="{ 
+                        'justify-center px-2 mx-2': sidebarCollapsed && window.innerWidth >= 1024,
+                        'px-4 mx-3': !sidebarCollapsed || window.innerWidth < 1024
+                    }">
+                    <i class="fas fa-users text-center" :class="{ 'w-6': !sidebarCollapsed || window.innerWidth < 1024, 'w-5': sidebarCollapsed && window.innerWidth >= 1024 }"></i>
                     <span x-show="!sidebarCollapsed || window.innerWidth < 1024" class="ml-3">Manajemen User</span>
                 </a>
                 <a href="/admin/subjects"
-                    class="flex items-center px-4 py-3 mx-3 mb-2 rounded-lg transition-colors duration-200 hover:bg-white hover:bg-opacity-10 <?= strpos(uri_string(), 'admin/subjects') === 0 ? 'bg-white bg-opacity-20' : '' ?>">
-                    <i class="fas fa-book w-6 text-center"></i>
+                    class="sidebar-nav-item flex items-center py-3 mb-2 rounded-lg transition-colors duration-200 hover:bg-white hover:bg-opacity-10 <?= strpos(uri_string(), 'admin/subjects') === 0 ? 'bg-white bg-opacity-20' : '' ?>"
+                    :class="{ 
+                        'justify-center px-2 mx-2': sidebarCollapsed && window.innerWidth >= 1024,
+                        'px-4 mx-3': !sidebarCollapsed || window.innerWidth < 1024
+                    }">
+                    <i class="fas fa-book text-center" :class="{ 'w-6': !sidebarCollapsed || window.innerWidth < 1024, 'w-5': sidebarCollapsed && window.innerWidth >= 1024 }"></i>
                     <span x-show="!sidebarCollapsed || window.innerWidth < 1024" class="ml-3">Mata Pelajaran</span>
                 </a>
                 <a href="/admin/exams"
-                    class="flex items-center px-4 py-3 mx-3 mb-2 rounded-lg transition-colors duration-200 hover:bg-white hover:bg-opacity-10 <?= strpos(uri_string(), 'admin/exams') === 0 ? 'bg-white bg-opacity-20' : '' ?>">
-                    <i class="fas fa-clipboard-list w-6 text-center"></i>
+                    class="sidebar-nav-item flex items-center py-3 mb-2 rounded-lg transition-colors duration-200 hover:bg-white hover:bg-opacity-10 <?= strpos(uri_string(), 'admin/exams') === 0 ? 'bg-white bg-opacity-20' : '' ?>"
+                    :class="{ 
+                        'justify-center px-2 mx-2': sidebarCollapsed && window.innerWidth >= 1024,
+                        'px-4 mx-3': !sidebarCollapsed || window.innerWidth < 1024
+                    }">
+                    <i class="fas fa-clipboard-list text-center" :class="{ 'w-6': !sidebarCollapsed || window.innerWidth < 1024, 'w-5': sidebarCollapsed && window.innerWidth >= 1024 }"></i>
                     <span x-show="!sidebarCollapsed || window.innerWidth < 1024" class="ml-3">Ujian</span>
-                </a>
-            <?php elseif (session()->get('role') === 'teacher'): ?>
+                </a> <?php elseif (session()->get('role') === 'teacher'): ?>
                 <a href="/teacher/dashboard"
-                    class="flex items-center px-4 py-3 mx-3 mb-2 rounded-lg transition-colors duration-200 hover:bg-white hover:bg-opacity-10 <?= uri_string() === 'teacher/dashboard' ? 'bg-white bg-opacity-20' : '' ?>">
-                    <i class="fas fa-tachometer-alt w-6 text-center"></i>
+                    class="flex items-center py-3 mb-2 rounded-lg transition-colors duration-200 hover:bg-white hover:bg-opacity-10 <?= uri_string() === 'teacher/dashboard' ? 'bg-white bg-opacity-20' : '' ?>"
+                    :class="{ 
+                        'justify-center px-2 mx-2': sidebarCollapsed && window.innerWidth >= 1024,
+                        'px-4 mx-3': !sidebarCollapsed || window.innerWidth < 1024
+                    }">
+                    <i class="fas fa-tachometer-alt text-center" :class="{ 'w-6': !sidebarCollapsed || window.innerWidth < 1024, 'w-5': sidebarCollapsed && window.innerWidth >= 1024 }"></i>
                     <span x-show="!sidebarCollapsed || window.innerWidth < 1024" class="ml-3">Dashboard</span>
                 </a>
                 <a href="/teacher/exams"
-                    class="flex items-center px-4 py-3 mx-3 mb-2 rounded-lg transition-colors duration-200 hover:bg-white hover:bg-opacity-10 <?= strpos(uri_string(), 'teacher/exams') === 0 ? 'bg-white bg-opacity-20' : '' ?>">
-                    <i class="fas fa-clipboard-list w-6 text-center"></i>
+                    class="flex items-center py-3 mb-2 rounded-lg transition-colors duration-200 hover:bg-white hover:bg-opacity-10 <?= strpos(uri_string(), 'teacher/exams') === 0 ? 'bg-white bg-opacity-20' : '' ?>"
+                    :class="{ 
+                        'justify-center px-2 mx-2': sidebarCollapsed && window.innerWidth >= 1024,
+                        'px-4 mx-3': !sidebarCollapsed || window.innerWidth < 1024
+                    }">
+                    <i class="fas fa-clipboard-list text-center" :class="{ 'w-6': !sidebarCollapsed || window.innerWidth < 1024, 'w-5': sidebarCollapsed && window.innerWidth >= 1024 }"></i>
                     <span x-show="!sidebarCollapsed || window.innerWidth < 1024" class="ml-3">Ujian Saya</span>
                 </a>
             <?php elseif (session()->get('role') === 'student'): ?>
                 <a href="/student/dashboard"
-                    class="flex items-center px-4 py-3 mx-3 mb-2 rounded-lg transition-colors duration-200 hover:bg-white hover:bg-opacity-10 <?= uri_string() === 'student/dashboard' ? 'bg-white bg-opacity-20' : '' ?>">
-                    <i class="fas fa-tachometer-alt w-6 text-center"></i>
+                    class="flex items-center py-3 mb-2 rounded-lg transition-colors duration-200 hover:bg-white hover:bg-opacity-10 <?= uri_string() === 'student/dashboard' ? 'bg-white bg-opacity-20' : '' ?>"
+                    :class="{ 
+                        'justify-center px-2 mx-2': sidebarCollapsed && window.innerWidth >= 1024,
+                        'px-4 mx-3': !sidebarCollapsed || window.innerWidth < 1024
+                    }">
+                    <i class="fas fa-tachometer-alt text-center" :class="{ 'w-6': !sidebarCollapsed || window.innerWidth < 1024, 'w-5': sidebarCollapsed && window.innerWidth >= 1024 }"></i>
                     <span x-show="!sidebarCollapsed || window.innerWidth < 1024" class="ml-3">Dashboard</span>
                 </a>
                 <a href="/student/results"
-                    class="flex items-center px-4 py-3 mx-3 mb-2 rounded-lg transition-colors duration-200 hover:bg-white hover:bg-opacity-10 <?= strpos(uri_string(), 'student/results') === 0 ? 'bg-white bg-opacity-20' : '' ?>">
-                    <i class="fas fa-chart-line w-6 text-center"></i>
+                    class="flex items-center py-3 mb-2 rounded-lg transition-colors duration-200 hover:bg-white hover:bg-opacity-10 <?= strpos(uri_string(), 'student/results') === 0 ? 'bg-white bg-opacity-20' : '' ?>"
+                    :class="{ 
+                        'justify-center px-2 mx-2': sidebarCollapsed && window.innerWidth >= 1024,
+                        'px-4 mx-3': !sidebarCollapsed || window.innerWidth < 1024
+                    }">
+                    <i class="fas fa-chart-line text-center" :class="{ 'w-6': !sidebarCollapsed || window.innerWidth < 1024, 'w-5': sidebarCollapsed && window.innerWidth >= 1024 }"></i>
                     <span x-show="!sidebarCollapsed || window.innerWidth < 1024" class="ml-3">Hasil Ujian</span>
                 </a>
             <?php endif; ?>
         </nav>
     </nav> <!-- Main Content -->
-    <div class="transition-all duration-300"
+    <div class="transition-all duration-300 sidebar-transition"
         :class="{ 
-            'lg:ml-64': !sidebarCollapsed,
-            'lg:ml-20': sidebarCollapsed,
+            'lg:ml-72': !sidebarCollapsed,
+            'lg:ml-16': sidebarCollapsed,
             'ml-0': window.innerWidth < 1024
-        }"> <!-- Top Navbar -->
+        }"><!-- Top Navbar -->
         <header class="bg-white shadow-sm border-b border-gray-200">
-            <div class="flex items-center justify-between px-4 py-3">
+            <div class="flex items-center justify-between px-3 sm:px-4 lg:px-6 py-3">
                 <div class="flex items-center">
                     <!-- Mobile menu button -->
                     <button @click="sidebarOpen = !sidebarOpen" class="p-2 rounded-lg text-gray-600 hover:bg-gray-100 lg:hidden">
@@ -171,7 +223,7 @@
                 </div>
             </div>
         </header> <!-- Content Area -->
-        <main class="p-4 sm:p-6">
+        <main class="main-content p-3 sm:p-4 lg:p-6">
             <!-- Flash Messages -->
             <?php if (session()->getFlashdata('success')): ?>
                 <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg" x-data="{ show: true }" x-show="show" x-transition>
