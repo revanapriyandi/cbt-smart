@@ -102,6 +102,7 @@ Pastikan penilaian objektif dan membantu pembelajaran siswa.
         // Ensure score doesn't exceed max score
         $score = min($score, $maxScore);
         $score = max($score, 0);
+        $score = (float) $score;
 
         // Extract feedback
         preg_match('/FEEDBACK:\s*(.*?)$/is', $response, $feedbackMatches);

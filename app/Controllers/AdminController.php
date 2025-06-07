@@ -25,11 +25,18 @@ class AdminController extends BaseController
     public function dashboard()
     {
         $data = [
-            'totalStudents' => $this->userModel->where('role', 'student')->countAllResults(),
-            'totalTeachers' => $this->userModel->where('role', 'teacher')->countAllResults(),
+            'totalUsers'    => $this->userModel->countAllResults(),
             'totalSubjects' => $this->subjectModel->countAllResults(),
-            'totalExams' => $this->examModel->countAllResults(),
-            'recentExams' => $this->examModel->getExamsWithDetails()
+            'totalExams'    => $this->examModel->countAllResults(),
+            'activeExams'   => count($this->examModel->getActiveExams()),
+            'recentUsers'   => $this->userModel
+                ->orderBy('created_at', 'DESC')
+                ->limit(5)
+                ->findAll(),
+            'recentExams'   => $this->examModel
+                ->orderBy('created_at', 'DESC')
+                ->limit(5)
+                ->getExamsWithDetails(),
         ];
 
         return view('admin/dashboard', $data);
@@ -38,15 +45,27 @@ class AdminController extends BaseController
     // User Management
     public function users($role = null)
     {
+        $search = $this->request->getGet('search');
+
         $builder = $this->userModel;
 
         if ($role && in_array($role, ['admin', 'teacher', 'student'])) {
             $builder = $builder->where('role', $role);
         }
 
+        if ($search) {
+            $builder = $builder
+                ->groupStart()
+                ->like('username', $search)
+                ->orLike('email', $search)
+                ->orLike('full_name', $search)
+                ->groupEnd();
+        }
+
         $data = [
             'users' => $builder->findAll(),
-            'currentRole' => $role
+            'role'  => $role,
+            'search' => $search,
         ];
 
         return view('admin/users', $data);
@@ -202,7 +221,35 @@ class AdminController extends BaseController
     // Exam Management
     public function exams()
     {
-        $data = ['exams' => $this->examModel->getExamsWithDetails()];
+        $search = $this->request->getGet('search');
+        $subjectFilter = $this->request->getGet('subject_id');
+        $statusFilter = $this->request->getGet('status');
+
+        $builder = $this->examModel
+            ->select('exams.*, subjects.name as subject_name, users.full_name as teacher_name')
+            ->join('subjects', 'subjects.id = exams.subject_id')
+            ->join('users', 'users.id = exams.teacher_id');
+
+        if ($subjectFilter) {
+            $builder->where('exams.subject_id', $subjectFilter);
+        }
+
+        if ($statusFilter) {
+            $builder->where('exams.status', $statusFilter);
+        }
+
+        if ($search) {
+            $builder->like('exams.title', $search);
+        }
+
+        $data = [
+            'exams'        => $builder->orderBy('exams.created_at', 'DESC')->findAll(),
+            'subjects'     => $this->subjectModel->findAll(),
+            'search'       => $search,
+            'subjectFilter' => $subjectFilter,
+            'statusFilter' => $statusFilter,
+        ];
+
         return view('admin/exams', $data);
     }
 
