@@ -106,4 +106,15 @@ class ExamResultModel extends Model
             ])
             ->update();
     }
+
+    public function getAverageScore($examId)
+    {
+        $result = $this->select('AVG(percentage) as average_score')
+            ->where('exam_id', $examId)
+            ->where('status', 'graded')
+            ->where('percentage IS NOT NULL')
+            ->first();
+
+        return $result ? round($result['average_score'], 1) : null;
+    }
 }

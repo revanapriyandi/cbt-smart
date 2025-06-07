@@ -18,27 +18,39 @@ $routes->post('/register', 'AuthController::register');
 
 // Admin routes
 $routes->group('admin', ['filter' => 'auth:admin'], function ($routes) {
-    $routes->get('dashboard', 'AdminController::dashboard');
-
-    // User management
-    $routes->get('users/(:segment)', 'AdminController::users/$1');
+    $routes->get('dashboard', 'AdminController::dashboard');    // User management - organized routes
     $routes->get('users', 'AdminController::users');
-    $routes->get('create-user', 'AdminController::createUser');
-    $routes->post('create-user', 'AdminController::createUser');
-    $routes->get('edit-user/(:num)', 'AdminController::editUser/$1');
-    $routes->post('edit-user/(:num)', 'AdminController::editUser/$1');
-    $routes->get('delete-user/(:num)', 'AdminController::deleteUser/$1');
-
-    // Subject management
+    $routes->get('users/create', 'AdminController::createUser');
+    $routes->get('users/edit/(:num)', 'AdminController::editUser/$1');
+    $routes->get('users/import', 'AdminController::importUsers');
+    $routes->get('users/(:segment)', 'AdminController::users/$1');
+    $routes->get('users-data', 'AdminController::getUsersData');
+    $routes->get('users/get/(:num)', 'AdminController::getUser/$1');
+    $routes->post('users/store', 'AdminController::createUser');
+    $routes->post('users/update/(:num)', 'AdminController::editUser/$1');
+    $routes->post('users/delete/(:num)', 'AdminController::deleteUser/$1');
+    $routes->get('users/export', 'AdminController::exportUsers');
+    $routes->post('users/import', 'AdminController::importUsers');
+    $routes->post('users/bulk-action', 'AdminController::bulkAction');
+    $routes->get('users/sample-csv', 'AdminController::sampleCsv'); // Subject management
     $routes->get('subjects', 'AdminController::subjects');
     $routes->get('create-subject', 'AdminController::createSubject');
     $routes->post('create-subject', 'AdminController::createSubject');
+    $routes->post('subjects/store', 'AdminController::createSubject');
+    $routes->get('subjects/get/(:num)', 'AdminController::getSubject/$1');
+    $routes->post('subjects/update/(:num)', 'AdminController::editSubject/$1');
+    $routes->get('subjects/delete/(:num)', 'AdminController::deleteSubject/$1');
     $routes->get('edit-subject/(:num)', 'AdminController::editSubject/$1');
     $routes->post('edit-subject/(:num)', 'AdminController::editSubject/$1');
-    $routes->get('delete-subject/(:num)', 'AdminController::deleteSubject/$1');
-
-    // Exam management
+    $routes->get('delete-subject/(:num)', 'AdminController::deleteSubject/$1');    // Exam management
     $routes->get('exams', 'AdminController::exams');
+    $routes->get('exams/create', 'AdminController::createExam');
+    $routes->post('exams/create', 'AdminController::createExam');
+    $routes->get('exams/view/(:num)', 'AdminController::viewExam/$1');
+    $routes->get('exams/publish/(:num)', 'AdminController::publishExam/$1');
+    $routes->get('exams/edit/(:num)', 'AdminController::editExam/$1');
+    $routes->post('exams/edit/(:num)', 'AdminController::editExam/$1');
+    $routes->get('exams/delete/(:num)', 'AdminController::deleteExam/$1');
     $routes->get('exam-results/(:num)', 'AdminController::examResults/$1');
     $routes->get('download-results/(:num)', 'AdminController::downloadResults/$1');
 });
@@ -75,6 +87,7 @@ $routes->group('student', ['filter' => 'auth:student'], function ($routes) {
 // API routes for AJAX calls
 $routes->group('api', function ($routes) {
     $routes->post('parse-pdf', 'ApiController::parsePdf');
+    $routes->post('parse-pdf-admin', 'ApiController::parsePdfAdmin');
     $routes->post('grade-answer', 'ApiController::gradeAnswer');
     $routes->get('exam-time-remaining/(:num)', 'ApiController::getTimeRemaining/$1');
     $routes->post('log-activity', 'ApiController::logActivity');
