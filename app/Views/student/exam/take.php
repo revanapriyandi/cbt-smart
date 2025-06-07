@@ -518,14 +518,40 @@
     window.addEventListener('beforeunload', function(e) {
         e.preventDefault();
         e.returnValue = '';
+        logActivity('page_unload');
     });
 
     // Handle visibility change (user switching tabs/windows)
     document.addEventListener('visibilitychange', function() {
         if (document.hidden) {
             console.warn('User switched away from exam window');
-            // You could implement additional security measures here
+            logActivity('tab_hidden');
+        } else {
+            logActivity('tab_visible');
         }
     });
+
+    document.addEventListener('copy', function() {
+        logActivity('copy');
+    });
+
+    document.addEventListener('paste', function() {
+        logActivity('paste');
+    });
+
+    function logActivity(type, details = '') {
+        fetch('<?= base_url('api/log-activity') ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                exam_id: <?= $exam['id'] ?>,
+                event_type: type,
+                details: details
+            })
+        });
+    }
 </script>
 <?= $this->endSection() ?>
