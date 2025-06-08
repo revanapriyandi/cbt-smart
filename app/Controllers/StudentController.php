@@ -6,6 +6,7 @@ use App\Models\ExamModel;
 use App\Models\ExamQuestionModel;
 use App\Models\StudentAnswerModel;
 use App\Models\ExamResultModel;
+use App\Models\UserActivityLogModel;
 
 class StudentController extends BaseController
 {
@@ -13,6 +14,7 @@ class StudentController extends BaseController
     protected $examQuestionModel;
     protected $studentAnswerModel;
     protected $examResultModel;
+    protected $userActivityLogModel;
 
     public function __construct()
     {
@@ -20,6 +22,7 @@ class StudentController extends BaseController
         $this->examQuestionModel = new ExamQuestionModel();
         $this->studentAnswerModel = new StudentAnswerModel();
         $this->examResultModel = new ExamResultModel();
+        $this->userActivityLogModel = new UserActivityLogModel();
     }
 
     public function dashboard()
@@ -63,10 +66,19 @@ class StudentController extends BaseController
         if (!$exam['is_active']) {
             session()->setFlashdata('error', 'Ujian tidak aktif!');
             return redirect()->to('/student/dashboard');
-        }
-
-        // Get or create exam result
+        }        // Get or create exam result
         $examResult = $this->examResultModel->getOrCreateResult($examId, $studentId);
+
+        // Log exam start activity (only if just created)
+        if ($examResult['started_at'] === date('Y-m-d H:i:s', strtotime('-5 seconds'))) {
+            $this->userActivityLogModel->logActivity(
+                $studentId,
+                'exam_start',
+                "Started exam: {$exam['title']}",
+                $this->request->getIPAddress(),
+                $this->request->getUserAgent()
+            );
+        }
 
         // Check if already submitted
         if ($examResult['status'] === 'submitted' || $examResult['status'] === 'graded') {
@@ -134,10 +146,18 @@ class StudentController extends BaseController
 
         if ($examResult['status'] === 'submitted' || $examResult['status'] === 'graded') {
             return $this->response->setJSON(['success' => false, 'message' => 'Ujian sudah diselesaikan']);
-        }
-
-        // Submit exam
+        }        // Submit exam
         if ($this->examResultModel->submitExam($examId, $studentId)) {
+            // Log exam submission activity
+            $exam = $this->examModel->find($examId);
+            $this->userActivityLogModel->logActivity(
+                $studentId,
+                'exam_submit',
+                "Submitted exam: {$exam['title']}",
+                $this->request->getIPAddress(),
+                $this->request->getUserAgent()
+            );
+
             session()->setFlashdata('success', 'Ujian berhasil diselesaikan!');
             return $this->response->setJSON(['success' => true, 'message' => 'Ujian berhasil diselesaikan', 'redirect' => '/student/dashboard']);
         } else {

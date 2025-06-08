@@ -18,46 +18,55 @@ $routes->post('/register', 'AuthController::register');
 
 // Admin routes
 $routes->group('admin', ['filter' => 'auth:admin'], function ($routes) {
-    $routes->get('dashboard', 'AdminController::dashboard');    // User management
-    $routes->get('users/export', 'AdminController::exportUsers');
-    $routes->get('users/(:segment)', 'AdminController::users/$1');
-    $routes->get('users', 'AdminController::users');
-    $routes->get('users-data', 'AdminController::getUsersData');
-    $routes->get('users/get/(:num)', 'AdminController::getUser/$1');
-    $routes->get('create-user', 'AdminController::createUser');
-    $routes->post('create-user', 'AdminController::createUser');
-    $routes->post('users/store', 'AdminController::createUser');
-    $routes->get('edit-user/(:num)', 'AdminController::editUser/$1');
-    $routes->post('edit-user/(:num)', 'AdminController::editUser/$1');
-    $routes->post('users/update/(:num)', 'AdminController::editUser/$1');
-    $routes->get('delete-user/(:num)', 'AdminController::deleteUser/$1');
-    $routes->post('users/delete/(:num)', 'AdminController::deleteUser/$1');
-    $routes->post('users/import', 'AdminController::importUsers');
-    $routes->post('users/bulk-action', 'AdminController::bulkAction');
+    // Dashboard
+    $routes->get('dashboard', 'Admin\AdminDashboardController::index');    // User management
+    $routes->get('users/export', 'Admin\AdminUserController::exportUsers');
+    $routes->get('users/view/(:num)', 'Admin\AdminUserController::viewUser/$1');
+    $routes->get('users/get/(:num)', 'Admin\AdminUserController::getUser/$1');
+    $routes->get('users/check-deletion/(:num)', 'Admin\AdminUserController::checkUserDeletion/$1');
+    $routes->get('users/activity-stats/(:num)', 'Admin\AdminUserController::getUserActivityStats/$1');
+    $routes->get('users/recent-activities/(:num)', 'Admin\AdminUserController::getUserRecentActivities/$1');
+    $routes->get('users/exam-performance/(:num)', 'Admin\AdminUserController::getUserExamPerformance/$1', ['filter' => 'examaccess']);
+    $routes->get('users-data', 'Admin\AdminUserController::getUsersData');
+    $routes->get('users/(:segment)', 'Admin\AdminUserController::users/$1');
+    $routes->get('users', 'Admin\AdminUserController::users');
+    $routes->get('create-user', 'Admin\AdminUserController::createUser');
+    $routes->post('create-user', 'Admin\AdminUserController::createUser');
+    $routes->post('users/store', 'Admin\AdminUserController::store');
+    $routes->get('edit-user/(:num)', 'Admin\AdminUserController::editUser/$1');
+    $routes->post('edit-user/(:num)', 'Admin\AdminUserController::editUser/$1');
+    $routes->post('users/update/(:num)', 'Admin\AdminUserController::editUser/$1');
+    $routes->get('delete-user/(:num)', 'Admin\AdminUserController::deleteUser/$1');
+    $routes->post('users/delete/(:num)', 'Admin\AdminUserController::deleteUser/$1');
+    $routes->post('users/import', 'Admin\AdminUserController::importUsers');
+    $routes->post('users/bulk-action', 'Admin\AdminUserController::bulkAction');
 
     // Subject management
-    $routes->get('subjects', 'AdminController::subjects');
-    $routes->get('subjects-data', 'AdminController::getSubjectsData');
-    $routes->get('create-subject', 'AdminController::createSubject');
-    $routes->post('create-subject', 'AdminController::createSubject');
-    $routes->post('subjects/store', 'AdminController::createSubject');
-    $routes->get('subjects/get/(:num)', 'AdminController::getSubject/$1');
-    $routes->get('subjects/view/(:num)', 'AdminController::viewSubject/$1');
-    $routes->post('subjects/update/(:num)', 'AdminController::editSubject/$1');
-    $routes->get('subjects/delete/(:num)', 'AdminController::deleteSubject/$1');
-    $routes->get('edit-subject/(:num)', 'AdminController::editSubject/$1');
-    $routes->post('edit-subject/(:num)', 'AdminController::editSubject/$1');
-    $routes->get('delete-subject/(:num)', 'AdminController::deleteSubject/$1'); // Exam management
-    $routes->get('exams', 'AdminController::exams');
-    $routes->get('exams/create', 'AdminController::createExam');
-    $routes->post('exams/create', 'AdminController::createExam');
-    $routes->get('exams/view/(:num)', 'AdminController::viewExam/$1');
-    $routes->get('exams/publish/(:num)', 'AdminController::publishExam/$1');
-    $routes->get('exams/edit/(:num)', 'AdminController::editExam/$1');
-    $routes->post('exams/edit/(:num)', 'AdminController::editExam/$1');
-    $routes->get('exams/delete/(:num)', 'AdminController::deleteExam/$1');
-    $routes->get('exam-results/(:num)', 'AdminController::examResults/$1');
-    $routes->get('download-results/(:num)', 'AdminController::downloadResults/$1');
+    $routes->get('subjects', 'Admin\AdminSubjectController::subjects');
+    $routes->get('subjects-data', 'Admin\AdminSubjectController::getSubjectsData');
+    $routes->get('create-subject', 'Admin\AdminSubjectController::createSubject');
+    $routes->post('create-subject', 'Admin\AdminSubjectController::createSubject');
+    $routes->post('subjects/store', 'Admin\AdminSubjectController::store');
+    $routes->get('subjects/get/(:num)', 'Admin\AdminSubjectController::getSubject/$1');
+    $routes->get('subjects/view/(:num)', 'Admin\AdminSubjectController::viewSubject/$1');
+    $routes->post('subjects/update/(:num)', 'Admin\AdminSubjectController::editSubject/$1');
+    $routes->get('subjects/delete/(:num)', 'Admin\AdminSubjectController::deleteSubject/$1');
+    $routes->get('edit-subject/(:num)', 'Admin\AdminSubjectController::editSubject/$1');
+    $routes->post('edit-subject/(:num)', 'Admin\AdminSubjectController::editSubject/$1');
+    $routes->get('delete-subject/(:num)', 'Admin\AdminSubjectController::deleteSubject/$1');
+
+    // Exam management
+    $routes->get('exams', 'Admin\AdminExamController::exams');
+    $routes->get('exams/create', 'Admin\AdminExamController::createExam');
+    $routes->post('exams/create', 'Admin\AdminExamController::createExam');
+    $routes->get('exams/view/(:num)', 'Admin\AdminExamController::viewExam/$1');
+    $routes->get('exams/publish/(:num)', 'Admin\AdminExamController::publishExam/$1');
+    $routes->get('exams/edit/(:num)', 'Admin\AdminExamController::editExam/$1');
+    $routes->post('exams/edit/(:num)', 'Admin\AdminExamController::editExam/$1');
+    $routes->get('exams/delete/(:num)', 'Admin\AdminExamController::deleteExam/$1');
+    $routes->get('exam-results/(:num)', 'Admin\AdminExamController::examResults/$1', ['filter' => 'examaccess']);
+    $routes->get('exams/results/(:num)', 'Admin\AdminExamController::examResults/$1', ['filter' => 'examaccess']);
+    $routes->get('download-results/(:num)', 'Admin\AdminExamController::downloadResults/$1', ['filter' => 'examaccess']);
 });
 
 // Teacher routes
@@ -86,7 +95,7 @@ $routes->group('student', ['filter' => 'auth:student'], function ($routes) {
     $routes->post('save-answer', 'StudentController::saveAnswer');
     $routes->post('submit-exam/(:num)', 'StudentController::submitExam/$1');
     $routes->get('results', 'StudentController::results');
-    $routes->get('result-detail/(:num)', 'StudentController::resultDetail/$1');
+    $routes->get('result-detail/(:num)', 'StudentController::resultDetail/$1', ['filter' => 'examaccess']);
 });
 
 // API routes for AJAX calls

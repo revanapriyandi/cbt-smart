@@ -5,7 +5,7 @@
         <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900">Users List</h3>
             <div class="flex items-center space-x-2">
-                <span class="text-sm text-gray-500">Total: <span id="total-users" class="font-medium text-gray-900">0</span></span>
+                <span class="text-sm text-gray-500">Total: <span id="total-users-table" class="font-medium text-gray-900">0</span></span>
             </div>
         </div>
     </div>
@@ -58,6 +58,22 @@
                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                         <div class="flex items-center space-x-1">
                             <span>Status</span>
+                            <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M5 8a1 1 0 011.707-.707L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4A1 1 0 015 8z" />
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        <div class="flex items-center space-x-1">
+                            <span>Last Login</span>
+                            <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M5 8a1 1 0 011.707-.707L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4A1 1 0 015 8z" />
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        <div class="flex items-center space-x-1">
+                            <span>Activity</span>
                             <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M5 8a1 1 0 011.707-.707L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4A1 1 0 015 8z" />
                             </svg>
