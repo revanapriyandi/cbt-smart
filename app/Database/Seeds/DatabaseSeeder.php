@@ -140,13 +140,46 @@ class DatabaseSeeder extends Seeder
                 'updated_at' => date('Y-m-d H:i:s')
             ]
         ];
-
         $this->db->table('exam_questions')->insertBatch($questions);
+
+        // Clear and create Academic Years
+        $this->db->table('schedules')->truncate();
+        $this->db->table('academic_years')->truncate();
+
+        $academicYears = [
+            [
+                'name' => '2023-2024',
+                'start_date' => '2023-08-01',
+                'end_date' => '2024-07-31',
+                'is_active' => 0,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ],
+            [
+                'name' => '2024-2025',
+                'start_date' => '2024-08-01',
+                'end_date' => '2025-07-31',
+                'is_active' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ],
+            [
+                'name' => '2025-2026',
+                'start_date' => '2025-08-01',
+                'end_date' => '2026-07-31',
+                'is_active' => 0,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ]
+        ];
+
+        $this->db->table('academic_years')->insertBatch($academicYears);
 
         echo "Database seeded successfully!\n";
         echo "Login credentials:\n";
         echo "Admin: admin / admin123\n";
         echo "Teacher: teacher1 / teacher123 or teacher2 / teacher123\n";
         echo "Student: student1 / student123 (up to student5)\n";
+        echo "Academic years: 2023-2024, 2024-2025 (active), 2025-2026\n";
     }
 }

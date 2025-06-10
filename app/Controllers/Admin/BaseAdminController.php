@@ -88,4 +88,21 @@ abstract class BaseAdminController extends BaseController
 
         return false;
     }
+    /**
+     * Log activity for security and audit purposes
+     */
+    protected function logActivity($activityType, $description, $additionalData = null)
+    {
+        $data = [
+            'user_id' => session()->get('user_id'),
+            'activity_type' => $activityType,
+            'description' => $description,
+            'ip_address' => $this->request->getIPAddress(),
+            'user_agent' => $this->request->getUserAgent()->getAgentString(),
+            'additional_data' => $additionalData ? json_encode($additionalData) : null,
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+
+        return $this->userActivityLogModel->insert($data);
+    }
 }

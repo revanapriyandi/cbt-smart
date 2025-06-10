@@ -141,6 +141,33 @@ class AdminUserController extends BaseAdminController
     }
 
     /**
+     * Get teachers data for dropdowns/select lists
+     */
+    public function getTeachers()
+    {
+        try {
+            $userModel = new \App\Models\UserModel();
+
+            $teachers = $userModel->select('id, full_name, email')
+                ->where('role', 'teacher')
+                ->where('is_active', 1)
+                ->orderBy('full_name', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            return $this->response->setJSON([
+                'success' => true,
+                'data' => $teachers
+            ]);
+        } catch (\Exception $e) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Failed to fetch teachers: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
      * Create new user (both GET and POST)
      */
     public function store()
@@ -226,7 +253,8 @@ class AdminUserController extends BaseAdminController
                 'full_name' => $this->request->getPost('full_name'),
                 'role' => $this->request->getPost('role'),
                 'is_active' => $this->request->getPost('is_active') ? 1 : 0
-            ];            // Only update password if provided
+            ];
+            // Only update password if provided
             $password = $this->request->getPost('password');
             if (!empty($password)) {
                 $data['password'] = $password;
@@ -245,9 +273,6 @@ class AdminUserController extends BaseAdminController
                         );
                     }
 
-                    // Also log activity for the updated user if it's a profile change
-                    // Only log if the user being updated is different from the current user
-                    // and the user still exists (to avoid foreign key constraint errors)
                     if ($id != $currentUserId && $this->userModel->find($id)) {
                         $this->userActivityLogModel->logActivity(
                             $id,
@@ -268,7 +293,7 @@ class AdminUserController extends BaseAdminController
                 } else {
                     // For regular form submissions, redirect with success message
                     session()->setFlashdata('success', 'User berhasil diupdate!');
-                    return redirect()->to('/admin/users');
+                    return redirect()->back();
                 }
             } else {
                 // Check if it's an AJAX request

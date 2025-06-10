@@ -1,5 +1,5 @@
 <script>
-    let currentRole = '';
+    let currentRole = '<?= $role ?? '' ?>';
     let currentStatus = '';
     let usersTable;
     let editingUserId = null;
@@ -8,7 +8,14 @@
         if (typeof $.fn.DataTable === 'undefined') {
             console.error('DataTables library not loaded!');
             return;
-        } // Initialize filter tab counts with data from the controller
+        }
+
+        // Initialize role filter based on URL parameter
+        if (currentRole) {
+            initializeRoleFilter(currentRole);
+        }
+
+        // Initialize filter tab counts with data from the controller
         updateFilterCounts();
 
         // Initialize DataTable with enhanced styling
@@ -332,10 +339,13 @@
             activeTab.addClass('border-green-500 text-green-600');
         } else {
             activeTab.addClass('border-indigo-500 text-indigo-600');
-        }
+        } // Reload table
+        // usersTable.ajax.reload();
+    }
 
-        // Reload table
-        usersTable.ajax.reload();
+    function initializeRoleFilter(role) {
+        // Set the current role and update tab styles
+        filterByRole(role);
     }
 
     function filterByStatus(status) {

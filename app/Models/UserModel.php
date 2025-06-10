@@ -100,4 +100,75 @@ class UserModel extends Model
 
         return $this->update($id, $data);
     }
+
+    /**
+     * Get students by class ID
+     */
+    public function getStudentsByClass($classId)
+    {
+        return $this->select('users.*, user_classes.enrolled_at, user_classes.status')
+            ->join('user_classes', 'user_classes.user_id = users.id')
+            ->where('user_classes.class_id', $classId)
+            ->where('users.role', 'student')
+            ->where('user_classes.status', 'active')
+            ->orderBy('users.full_name', 'ASC')
+            ->findAll();
+    }
+
+    /**
+     * Add student to class
+     */
+    public function addStudentToClass($userId, $classId)
+    {
+        $db = \Config\Database::connect();
+
+        // Check if already enrolled
+        $existing = $db->table('user_classes')
+            ->where('user_id', $userId)
+            ->where('class_id', $classId)
+            ->get()
+            ->getRow();
+
+        if ($existing) {
+            return false; // Already enrolled
+        }
+
+        return $db->table('user_classes')->insert([
+            'user_id' => $userId,
+            'class_id' => $classId,
+            'enrolled_at' => date('Y-m-d H:i:s'),
+            'status' => 'active',
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s')
+        ]);
+    }
+
+    /**
+     * Remove student from class
+     */
+    public function removeStudentFromClass($userId, $classId)
+    {
+        $db = \Config\Database::connect();
+        return $db->table('user_classes')
+            ->where('user_id', $userId)
+            ->where('class_id', $classId)
+            ->delete();
+    }
+
+    /**
+     * Get classes for a student
+     */
+    public function getStudentClasses($userId)
+    {
+        $db = \Config\Database::connect();
+        return $db->table('user_classes uc')
+            ->select('c.*, uc.enrolled_at, uc.status, u.full_name as homeroom_teacher_name')
+            ->join('classes c', 'c.id = uc.class_id')
+            ->join('users u', 'u.id = c.homeroom_teacher_id', 'left')
+            ->where('uc.user_id', $userId)
+            ->where('uc.status', 'active')
+            ->orderBy('c.name', 'ASC')
+            ->get()
+            ->getResultArray();
+    }
 }
