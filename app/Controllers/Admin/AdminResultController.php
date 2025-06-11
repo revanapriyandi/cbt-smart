@@ -320,14 +320,44 @@ class AdminResultController extends BaseAdminController
 
     private function exportToPDF($results)
     {
-        // Implementation would use a PDF library like TCPDF or mPDF
-        // For now, return simple text format
-        $filename = 'exam_results_' . date('Y-m-d_H-i-s') . '.pdf';
+        require_once APPPATH . 'Libraries/fpdf.php';
 
+        $pdf = new \FPDF('L', 'mm', 'A4');
+        $pdf->AddPage();
+        $pdf->SetFont('Arial', 'B', 14);
+        $pdf->Cell(0, 10, 'Laporan Hasil Ujian', 0, 1, 'C');
+        $pdf->Ln(5);
+
+        $pdf->SetFont('Arial', 'B', 10);
+        $headers = ['No', 'Nama', 'Username', 'Skor', 'Persentase', 'Status', 'Mulai', 'Selesai'];
+        $widths = [10, 55, 35, 25, 30, 25, 35, 35];
+        foreach ($headers as $i => $h) {
+            $pdf->Cell($widths[$i], 7, $h, 1, 0, 'C');
+        }
+        $pdf->Ln();
+
+        $pdf->SetFont('Arial', '', 9);
+        $no = 1;
+        foreach ($results as $row) {
+            $r = (object) $row;
+            $pdf->Cell($widths[0], 6, $no++, 1);
+            $pdf->Cell($widths[1], 6, $r->student_name ?? '', 1);
+            $pdf->Cell($widths[2], 6, $r->student_username ?? '', 1);
+            $pdf->Cell($widths[3], 6, $r->total_score ?? 0, 1, 0, 'R');
+            $pdf->Cell($widths[4], 6, ($r->percentage ?? 0) . '%', 1, 0, 'R');
+            $pdf->Cell($widths[5], 6, ucfirst($r->status ?? ''), 1);
+            $pdf->Cell($widths[6], 6, $r->started_at ?? '-', 1);
+            $pdf->Cell($widths[7], 6, $r->submitted_at ?? '-', 1);
+            $pdf->Ln();
+        }
+
+        $filename = 'exam_results_' . date('Y-m-d_H-i-s') . '.pdf';
         header('Content-Type: application/pdf');
         header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
 
-        echo "PDF export not implemented yet";
+        $pdf->Output('I', $filename, true);
+        return;
     }
 
     private function exportToCSV($results)
@@ -473,14 +503,85 @@ class AdminResultController extends BaseAdminController
 
     private function generateDetailedReport($data)
     {
-        // Implementation for detailed report
-        return "<h1>Detailed Report</h1>";
+        $html = "<div class='header'>
+            <h1>Laporan Detail Hasil Ujian</h1>
+            <p>Tanggal: " . date('d/m/Y H:i') . "</p>
+        </div>";
+
+        $html .= "<table class='table'>
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Nama Siswa</th>
+                    <th>Username</th>
+                    <th>Total Skor</th>
+                    <th>Persentase</th>
+                    <th>Status</th>
+                    <th>Mulai</th>
+                    <th>Selesai</th>
+                </tr>
+            </thead>
+            <tbody>";
+
+        $no = 1;
+        foreach ($data as $row) {
+            $r = (object) $row;
+            $html .= "<tr>
+                <td>{$no}</td>
+                <td>" . htmlspecialchars($r->student_name ?? '') . "</td>
+                <td>" . htmlspecialchars($r->student_username ?? '') . "</td>
+                <td>" . ($r->total_score ?? 0) . "</td>
+                <td>" . ($r->percentage ?? 0) . "%</td>
+                <td>" . ucfirst($r->status ?? '') . "</td>
+                <td>" . ($r->started_at ?? '-') . "</td>
+                <td>" . ($r->submitted_at ?? '-') . "</td>
+            </tr>";
+            $no++;
+        }
+
+        $html .= "</tbody></table>";
+
+        return $html;
     }
 
     private function generateAnalysisReport($data)
     {
-        // Implementation for analysis report
-        return "<h1>Analysis Report</h1>";
+        $total = count($data);
+        $totalScore = 0;
+        $passCount = 0;
+        foreach ($data as $row) {
+            $r = (object) $row;
+            $score = (float) ($r->percentage ?? 0);
+            $totalScore += $score;
+            if ($score >= 60) {
+                $passCount++;
+            }
+        }
+
+        $average = $total > 0 ? round($totalScore / $total, 2) : 0;
+        $passRate = $total > 0 ? round(($passCount / $total) * 100, 2) : 0;
+
+        $html = "<div class='header'>
+            <h1>Laporan Analisis Hasil Ujian</h1>
+            <p>Tanggal: " . date('d/m/Y H:i') . "</p>
+        </div>";
+
+        $html .= "<div class='stats'>
+            <div class='stat-box'>
+                <h3>{$total}</h3>
+                <p>Total Peserta</p>
+            </div>
+            <div class='stat-box'>
+                <h3>{$average}</h3>
+                <p>Rata-rata Skor</p>
+            </div>
+            <div class='stat-box'>
+                <h3>{$passRate}%</h3>
+                <p>Tingkat Kelulusan</p>
+            </div>
+        </div>";
+
+        return $html;
     }
 
     public function publishResults()
@@ -507,13 +608,54 @@ class AdminResultController extends BaseAdminController
 
     private function sendResultNotifications($sessionId)
     {
-        // Get session and participants
         $session = $this->examSessionModel->getSessionWithDetails($sessionId);
         $results = $this->examResultModel->getSessionResults($sessionId);
 
-        foreach ($results as $result) {
-            // Implementation for sending email/SMS notifications
-            // This could be integrated with email service or notification system
+        $settingModel = new \App\Models\SystemSettingModel();
+        $emailSettings = $settingModel->getSettingsByCategory('email');
+
+        $email = \Config\Services::email();
+        $config = [
+            'protocol' => 'smtp',
+            'SMTPHost' => $emailSettings['smtp_host'] ?? '',
+            'SMTPUser' => $emailSettings['smtp_user'] ?? '',
+            'SMTPPass' => $emailSettings['smtp_pass'] ?? '',
+            'SMTPPort' => $emailSettings['smtp_port'] ?? 587,
+            'SMTPCrypto' => $emailSettings['smtp_crypto'] ?? 'tls',
+        ];
+        $email->initialize($config);
+
+        foreach ($results as $res) {
+            $result = (object) $res;
+            $student = $this->userModel->find($result->student_id);
+            if (!$student || empty($student['email'])) {
+                continue;
+            }
+
+            $email->clear();
+            $email->setFrom($emailSettings['from_email'] ?? '', $emailSettings['from_name'] ?? '');
+            $email->setTo($student['email']);
+            $email->setSubject('Hasil Ujian ' . ($session->exam_title ?? ''));
+            $message = "Halo {$student['full_name']}, hasil ujian '{$session->exam_title}' telah dipublikasikan. Silakan login untuk melihat detailnya.";
+            $email->setMessage($message);
+
+            try {
+                $email->send();
+            } catch (\Throwable $e) {
+                log_message('error', 'Failed to send result email: ' . $e->getMessage());
+            }
+
+            try {
+                $this->db->table('notifications')->insert([
+                    'user_id' => $result->student_id,
+                    'type' => 'result',
+                    'title' => 'Hasil Ujian Dipublikasikan',
+                    'message' => "Hasil ujian '{$session->exam_title}' telah dipublikasikan.",
+                    'created_at' => date('Y-m-d H:i:s')
+                ]);
+            } catch (\Throwable $e) {
+                log_message('error', 'Failed to record notification: ' . $e->getMessage());
+            }
         }
     }
 
