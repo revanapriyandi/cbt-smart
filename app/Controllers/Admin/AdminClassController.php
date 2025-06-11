@@ -832,8 +832,19 @@ class AdminClassController extends BaseAdminController
             if (isset($s['status']) && $s['status'] === 'active') $active++;
             else $inactive++;
         }
-        // TODO: Hitung ujian aktif jika ada relasi
-        $activeExams = 0;
+        // Count active exam sessions for this class
+        $examSessionModel = new \App\Models\ExamSessionModel();
+        try {
+            $activeExams = $examSessionModel
+                ->join('exams', 'exams.id = exam_sessions.exam_id')
+                ->where('exam_sessions.class_id', $id)
+                ->where('exam_sessions.status', 'active')
+                ->where('exams.is_active', 1)
+                ->countAllResults();
+        } catch (\Exception $e) {
+            log_message('error', 'Failed to count active exams for class: ' . $e->getMessage());
+            $activeExams = 0;
+        }
         return $this->response->setJSON([
             'activeStudents' => $active,
             'inactiveStudents' => $inactive,
@@ -846,9 +857,27 @@ class AdminClassController extends BaseAdminController
      */
     public function recentActivity($id)
     {
-        // Dummy: tampilkan kosong atau ambil dari log jika ada
-        $activities = [];
-        // TODO: Implementasi ambil log aktivitas kelas jika ada
+        try {
+            $logModel = new \App\Models\UserActivityLogModel();
+            $activities = $logModel
+                ->select('user_activity_logs.*, users.full_name')
+                ->join('users', 'users.id = user_activity_logs.user_id', 'left')
+                ->join('user_classes', 'user_classes.user_id = users.id', 'left')
+                ->where('user_classes.class_id', $id)
+                ->orderBy('user_activity_logs.created_at', 'DESC')
+                ->limit(10)
+                ->findAll();
+
+            foreach ($activities as &$activity) {
+                $activity['icon'] = $this->getActivityIcon($activity['activity_type']);
+                $activity['time_ago'] = $this->timeAgo($activity['created_at']);
+                $activity['description'] = $activity['activity_description'];
+            }
+        } catch (\Exception $e) {
+            log_message('error', 'Failed to load class activity: ' . $e->getMessage());
+            $activities = [];
+        }
+
         return $this->response->setJSON([
             'activities' => $activities
         ]);
