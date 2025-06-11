@@ -3,6 +3,7 @@
 namespace App\Controllers\Admin;
 
 use App\Models\ExamResultModel;
+use App\Services\ExamResultService;
 use App\Models\ExamModel;
 use App\Models\ExamSessionModel;
 use App\Models\ClassModel;
@@ -12,6 +13,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 class AdminResultController extends BaseAdminController
 {
     protected $examResultModel;
+    protected $examResultService;
     protected $examModel;
     protected $examSessionModel;
     protected $classModel;
@@ -20,6 +22,7 @@ class AdminResultController extends BaseAdminController
     {
         parent::__construct();
         $this->examResultModel = new ExamResultModel();
+        $this->examResultService = new ExamResultService();
         $this->examModel = new ExamModel();
         $this->examSessionModel = new ExamSessionModel();
         $this->classModel = new ClassModel();
@@ -204,7 +207,7 @@ class AdminResultController extends BaseAdminController
         }
 
         // Recalculate total score
-        $this->examResultModel->recalculateScore($resultId);
+        $this->examResultService->recalculateScore($resultId);
 
         // Log activity
         $this->logActivity('essay_graded', "Essay untuk hasil ujian ID: {$resultId} telah dinilai");
@@ -226,19 +229,19 @@ class AdminResultController extends BaseAdminController
 
         switch ($action) {
             case 'delete':
-                $result = $this->examResultModel->bulkDelete($resultIds);
+                $result = $this->examResultService->bulkDelete($resultIds);
                 $message = $result ? 'Hasil ujian berhasil dihapus' : 'Gagal menghapus hasil ujian';
                 break;
             case 'publish':
-                $result = $this->examResultModel->bulkPublish($resultIds);
+                $result = $this->examResultService->bulkPublish($resultIds);
                 $message = $result ? 'Hasil ujian berhasil dipublikasi' : 'Gagal mempublikasi hasil ujian';
                 break;
             case 'unpublish':
-                $result = $this->examResultModel->bulkUnpublish($resultIds);
+                $result = $this->examResultService->bulkUnpublish($resultIds);
                 $message = $result ? 'Hasil ujian berhasil disembunyikan' : 'Gagal menyembunyikan hasil ujian';
                 break;
             case 'recalculate':
-                $result = $this->examResultModel->bulkRecalculate($resultIds);
+                $result = $this->examResultService->bulkRecalculate($resultIds);
                 $message = $result ? 'Skor berhasil dihitung ulang' : 'Gagal menghitung ulang skor';
                 break;
             default:
