@@ -34,7 +34,7 @@ class StudentController extends BaseController
             'upcomingExams' => $this->examModel->getUpcomingExams(),
             'completedExams' => $this->examResultModel->getResultsByStudent($studentId),
             'totalCompleted' => $this->examResultModel->where('student_id', $studentId)
-                ->where('status', 'graded')
+                ->where('status', EXAM_STATUS_GRADED)
                 ->countAllResults()
         ];
 
@@ -81,7 +81,7 @@ class StudentController extends BaseController
         }
 
         // Check if already submitted
-        if ($examResult['status'] === 'submitted' || $examResult['status'] === 'graded') {
+        if ($examResult['status'] === EXAM_STATUS_SUBMITTED || $examResult['status'] === EXAM_STATUS_GRADED) {
             session()->setFlashdata('info', 'Anda sudah menyelesaikan ujian ini.');
             return redirect()->to('/student/result-detail/' . $examId);
         }
@@ -144,7 +144,7 @@ class StudentController extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Data ujian tidak ditemukan']);
         }
 
-        if ($examResult['status'] === 'submitted' || $examResult['status'] === 'graded') {
+        if ($examResult['status'] === EXAM_STATUS_SUBMITTED || $examResult['status'] === EXAM_STATUS_GRADED) {
             return $this->response->setJSON(['success' => false, 'message' => 'Ujian sudah diselesaikan']);
         }        // Submit exam
         if ($this->examResultModel->submitExam($examId, $studentId)) {

@@ -375,7 +375,7 @@ class AdminAnalyticsController extends BaseAdminController
                 ->selectAvg('score')
                 ->where('created_at >=', $startDate)
                 ->where('created_at <=', $endDate)
-                ->where('status', 'graded')
+                ->where('status', EXAM_STATUS_GRADED)
                 ->get()
                 ->getRowArray();
 
@@ -498,7 +498,7 @@ class AdminAnalyticsController extends BaseAdminController
                 ->join('subjects s', 's.id = e.subject_id')
                 ->where('er.created_at >=', $startDate)
                 ->where('er.created_at <=', $endDate)
-                ->where('er.status', 'graded')
+                ->where('er.status', EXAM_STATUS_GRADED)
                 ->groupBy('s.id')
                 ->having('total_attempts >', 0)
                 ->orderBy('average_score', 'DESC')
@@ -534,7 +534,7 @@ class AdminAnalyticsController extends BaseAdminController
                 ->join('classes c', 'c.id = u.class_id')
                 ->where('er.created_at >=', $startDate)
                 ->where('er.created_at <=', $endDate)
-                ->where('er.status', 'graded')
+                ->where('er.status', EXAM_STATUS_GRADED)
                 ->groupBy('c.id')
                 ->having('total_attempts >', 0)
                 ->orderBy('average_score', 'DESC')
@@ -621,7 +621,7 @@ class AdminAnalyticsController extends BaseAdminController
                      MAX(score) as highest_score,                     MIN(score) as lowest_score,
                      STDDEV(score) as score_deviation")
             ->where('exam_id', $examId)
-            ->where('status', 'graded')
+            ->where('status', EXAM_STATUS_GRADED)
             ->get()
             ->getRowArray();
 
@@ -636,7 +636,7 @@ class AdminAnalyticsController extends BaseAdminController
                      END as grade_range,
                      COUNT(*) as count")
             ->where('exam_id', $examId)
-            ->where('status', 'graded')
+            ->where('status', EXAM_STATUS_GRADED)
             ->groupBy('grade_range')
             ->get()
             ->getResultArray();
@@ -666,7 +666,7 @@ class AdminAnalyticsController extends BaseAdminController
             ->join('exams', 'exams.id = exam_results.exam_id')
             ->where('exam_results.created_at >=', $startDate)
             ->where('exam_results.created_at <=', $endDate)
-            ->where('exam_results.status', 'graded')
+            ->where('exam_results.status', EXAM_STATUS_GRADED)
             ->groupBy('exams.id')
             ->orderBy('average_score', 'DESC')
             ->limit(10)
@@ -703,7 +703,7 @@ class AdminAnalyticsController extends BaseAdminController
                      MIN(er.score) as lowest_score")
             ->where('er.created_at >=', $startDate)
             ->where('er.created_at <=', $endDate)
-            ->where('er.status', 'graded')
+            ->where('er.status', EXAM_STATUS_GRADED)
             ->get()
             ->getRowArray();
 
@@ -721,7 +721,7 @@ class AdminAnalyticsController extends BaseAdminController
             ->select("DATE(er.created_at) as date, AVG(er.score) as average_score")
             ->where('er.created_at >=', $startDate)
             ->where('er.created_at <=', $endDate)
-            ->where('er.status', 'graded')
+            ->where('er.status', EXAM_STATUS_GRADED)
             ->groupBy('DATE(er.created_at)')
             ->orderBy('date', 'ASC')
             ->get()

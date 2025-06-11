@@ -266,7 +266,7 @@ class AdminReportController extends BaseAdminController
                 $builder->where('exams.id', $filters['exam_id']);
             }
 
-            $builder->where('exam_results.status', 'graded');
+            $builder->where('exam_results.status', EXAM_STATUS_GRADED);
             $builder->orderBy('exam_results.created_at', 'DESC');
 
             $results = $builder->get()->getResultArray();
@@ -325,7 +325,7 @@ class AdminReportController extends BaseAdminController
                 $builder->where('users.class_id', $filters['class_id']);
             }
 
-            $builder->where('exam_results.status', 'graded');
+            $builder->where('exam_results.status', EXAM_STATUS_GRADED);
             $builder->groupBy(['users.id', 'users.name', 'users.email', 'classes.name']);
             $builder->orderBy('average_score', 'DESC');
 
@@ -395,7 +395,7 @@ class AdminReportController extends BaseAdminController
                 $builder->where('exams.id', $filters['exam_id']);
             }
 
-            $builder->where('exam_results.status', 'graded');
+            $builder->where('exam_results.status', EXAM_STATUS_GRADED);
             $builder->groupBy(['exams.id', 'exams.title', 'exams.duration_minutes', 'subjects.name']);
             $builder->orderBy('average_score', 'ASC');
 
@@ -573,7 +573,7 @@ class AdminReportController extends BaseAdminController
             $builder->where('subjects.id', $filters['subject_id']);
         }
 
-        $builder->where('exam_results.status', 'graded');
+        $builder->where('exam_results.status', EXAM_STATUS_GRADED);
         $builder->orderBy('users.name', 'ASC');
         $builder->orderBy('exam_results.created_at', 'ASC');
 
@@ -814,7 +814,7 @@ class AdminReportController extends BaseAdminController
         $builder->join('exams', 'exams.id = exam_results.exam_id');
         $builder->join('subjects', 'subjects.id = exams.subject_id');
         $builder->where('exam_results.student_id', $studentId);
-        $builder->where('exam_results.status', 'graded');
+        $builder->where('exam_results.status', EXAM_STATUS_GRADED);
 
         if (!empty($filters['start_date'])) {
             $builder->where('exam_results.created_at >=', $filters['start_date']);

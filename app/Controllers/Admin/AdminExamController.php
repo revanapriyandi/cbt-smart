@@ -436,8 +436,8 @@ class AdminExamController extends BaseAdminController
         // Get exam statistics
         $stats = [
             'total_participants' => $this->examResultModel->where('exam_id', $id)->countAllResults(),
-            'completed_participants' => $this->examResultModel->where('exam_id', $id)->where('status', 'submitted')->countAllResults(),
-            'graded_participants' => $this->examResultModel->where('exam_id', $id)->where('status', 'graded')->countAllResults(),
+            'completed_participants' => $this->examResultModel->where('exam_id', $id)->where('status', EXAM_STATUS_SUBMITTED)->countAllResults(),
+            'graded_participants' => $this->examResultModel->where('exam_id', $id)->where('status', EXAM_STATUS_GRADED)->countAllResults(),
             'average_score' => $this->examResultModel->getAverageScore($id)
         ];
 

@@ -139,7 +139,7 @@ class AdminSubjectController extends BaseAdminController
             ->join('users u', 'u.id = er.student_id')
             ->join('exams e', 'e.id = er.exam_id')
             ->where('e.subject_id', $id)
-            ->where('er.status', 'graded')
+            ->where('er.status', EXAM_STATUS_GRADED)
             ->groupBy('er.student_id')
             ->orderBy('avg_score', 'DESC')
             ->limit(10)
