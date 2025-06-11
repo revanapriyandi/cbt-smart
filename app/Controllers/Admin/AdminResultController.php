@@ -8,6 +8,8 @@ use App\Models\ExamModel;
 use App\Models\ExamSessionModel;
 use App\Models\ClassModel;
 use App\Models\UserModel;
+use App\Models\SystemSettingModel;
+use Mpdf\Mpdf;
 use CodeIgniter\HTTP\ResponseInterface;
 
 class AdminResultController extends BaseAdminController
@@ -18,6 +20,7 @@ class AdminResultController extends BaseAdminController
     protected $examSessionModel;
     protected $classModel;
     protected $userModel;
+    protected $systemSettingModel;
     public function __construct()
     {
         parent::__construct();
@@ -27,6 +30,7 @@ class AdminResultController extends BaseAdminController
         $this->examSessionModel = new ExamSessionModel();
         $this->classModel = new ClassModel();
         $this->userModel = new UserModel();
+        $this->systemSettingModel = new SystemSettingModel();
     }
 
     public function index()
@@ -320,14 +324,41 @@ class AdminResultController extends BaseAdminController
 
     private function exportToPDF($results)
     {
-        // Implementation would use a PDF library like TCPDF or mPDF
-        // For now, return simple text format
         $filename = 'exam_results_' . date('Y-m-d_H-i-s') . '.pdf';
 
-        header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        $mpdf = new Mpdf();
 
-        echo "PDF export not implemented yet";
+        $html = '<h1>Daftar Hasil Ujian</h1>';
+        $html .= '<table style="width:100%;border-collapse:collapse" border="1" cellpadding="5">';
+        $html .= '<thead><tr>' .
+            '<th>No</th><th>Nama</th><th>NIS</th><th>Kelas</th><th>Ujian</th>' .
+            '<th>Sesi</th><th>Skor</th><th>Nilai</th><th>Status</th>' .
+            '</tr></thead><tbody>';
+
+        $no = 1;
+        foreach ($results as $row) {
+            $r = (object) $row;
+            $html .= '<tr>' .
+                '<td>' . $no++ . '</td>' .
+                '<td>' . htmlspecialchars($r->student_name ?? '') . '</td>' .
+                '<td>' . htmlspecialchars($r->student_username ?? '') . '</td>' .
+                '<td>' . htmlspecialchars($r->class_name ?? '-') . '</td>' .
+                '<td>' . htmlspecialchars($r->exam_title ?? '-') . '</td>' .
+                '<td>' . htmlspecialchars($r->session_name ?? '-') . '</td>' .
+                '<td>' . ($r->score ?? $r->total_score ?? 0) . '</td>' .
+                '<td>' . ($r->final_grade ?? '-') . '</td>' .
+                '<td>' . ucfirst($r->status ?? '') . '</td>' .
+                '</tr>';
+        }
+        $html .= '</tbody></table>';
+
+        $mpdf->WriteHTML($html);
+        $pdfContent = $mpdf->Output($filename, 'S');
+
+        return $this->response
+            ->setHeader('Content-Type', 'application/pdf')
+            ->setHeader('Content-Disposition', 'attachment;filename="' . $filename . '"')
+            ->setBody($pdfContent);
     }
 
     private function exportToCSV($results)
@@ -473,14 +504,89 @@ class AdminResultController extends BaseAdminController
 
     private function generateDetailedReport($data)
     {
-        // Implementation for detailed report
-        return "<h1>Detailed Report</h1>";
+        $html = "<div class='header'>
+            <h1>Laporan Detail Hasil Ujian</h1>
+            <p>Tanggal: " . date('d/m/Y H:i') . "</p>
+        </div>";
+
+        $html .= "<table class='table'>
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Nama Siswa</th>
+                    <th>NIS</th>
+                    <th>Kelas</th>
+                    <th>Ujian</th>
+                    <th>Sesi</th>
+                    <th>Skor</th>
+                    <th>Nilai</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>";
+
+        $no = 1;
+        foreach ($data as $row) {
+            $rowObj = (object) $row;
+            $html .= "<tr>
+                    <td>{$no}</td>
+                    <td>" . htmlspecialchars($rowObj->student_name ?? '') . "</td>
+                    <td>" . htmlspecialchars($rowObj->student_username ?? '') . "</td>
+                    <td>" . htmlspecialchars($rowObj->class_name ?? '-') . "</td>
+                    <td>" . htmlspecialchars($rowObj->exam_title ?? '-') . "</td>
+                    <td>" . htmlspecialchars($rowObj->session_name ?? '-') . "</td>
+                    <td>" . ($rowObj->score ?? $rowObj->total_score ?? 0) . "</td>
+                    <td>" . ($rowObj->final_grade ?? '-') . "</td>
+                    <td>" . ucfirst($rowObj->status ?? '') . "</td>
+                </tr>";
+            $no++;
+        }
+
+        $html .= "</tbody></table>";
+
+        return $html;
     }
 
     private function generateAnalysisReport($data)
     {
-        // Implementation for analysis report
-        return "<h1>Analysis Report</h1>";
+        $total = count($data);
+        $totalScore = 0;
+        $highest = 0;
+        $lowest = 100;
+        $passCount = 0;
+
+        foreach ($data as $row) {
+            $rowObj = (object) $row;
+            $score = (float)($rowObj->percentage ?? 0);
+            $totalScore += $score;
+            if ($score > $highest) {
+                $highest = $score;
+            }
+            if ($score < $lowest) {
+                $lowest = $score;
+            }
+            if ($score >= 60) {
+                $passCount++;
+            }
+        }
+
+        $average = $total > 0 ? round($totalScore / $total, 2) : 0;
+        $passRate = $total > 0 ? round(($passCount / $total) * 100, 2) : 0;
+
+        $html = "<div class='header'>
+            <h1>Laporan Analisis Hasil Ujian</h1>
+            <p>Tanggal: " . date('d/m/Y H:i') . "</p>
+        </div>";
+
+        $html .= "<div class='stats'>
+            <div class='stat-box'><h3>{$total}</h3><p>Total Peserta</p></div>
+            <div class='stat-box'><h3>{$average}</h3><p>Rata-rata Skor</p></div>
+            <div class='stat-box'><h3>{$highest}</h3><p>Skor Tertinggi</p></div>
+            <div class='stat-box'><h3>{$lowest}</h3><p>Skor Terendah</p></div>
+            <div class='stat-box'><h3>{$passRate}%</h3><p>Tingkat Kelulusan</p></div>
+        </div>";
+
+        return $html;
     }
 
     public function publishResults()
@@ -507,13 +613,33 @@ class AdminResultController extends BaseAdminController
 
     private function sendResultNotifications($sessionId)
     {
-        // Get session and participants
         $session = $this->examSessionModel->getSessionWithDetails($sessionId);
         $results = $this->examResultModel->getSessionResults($sessionId);
 
+        $emailSettings = $this->systemSettingModel->getSettingsByCategory('email');
+        $email = \Config\Services::email();
+        $config = [
+            'protocol'  => 'smtp',
+            'SMTPHost'  => $emailSettings['smtp_host'] ?? '',
+            'SMTPUser'  => $emailSettings['smtp_user'] ?? '',
+            'SMTPPass'  => $emailSettings['smtp_pass'] ?? '',
+            'SMTPPort'  => $emailSettings['smtp_port'] ?? 587,
+            'SMTPCrypto'=> $emailSettings['smtp_crypto'] ?? 'tls'
+        ];
+        $email->initialize($config);
+
         foreach ($results as $result) {
-            // Implementation for sending email/SMS notifications
-            // This could be integrated with email service or notification system
+            $r = (object) $result;
+            if (empty($r->student_email)) {
+                continue;
+            }
+
+            $email->clear();
+            $email->setFrom($emailSettings['from_email'] ?? 'noreply@example.com', $emailSettings['from_name'] ?? 'CBT Smart');
+            $email->setTo($r->student_email);
+            $email->setSubject('Hasil Ujian ' . ($session->session_name ?? ''));
+            $email->setMessage("Halo {$r->student_name}, hasil ujian " . ($session->exam_title ?? '') . " telah dipublikasikan. Silakan login untuk melihat detail hasil Anda.");
+            $email->send();
         }
     }
 
