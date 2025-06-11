@@ -409,12 +409,9 @@ class AdminResultController extends BaseAdminController
             return $this->response->setJSON(['success' => false, 'message' => 'Parameter tidak lengkap']);
         }
 
-        $reportData = $this->examResultModel->generateReport($examId, $classId, $reportType);
+        $filename = $this->examResultService->createReport($examId, $classId, $reportType);
 
-        if ($reportData) {
-            // Generate report file
-            $filename = $this->createReportFile($reportData, $reportType);
-
+        if ($filename) {
             return $this->response->setJSON([
                 'success' => true,
                 'message' => 'Laporan berhasil dibuat',
@@ -598,7 +595,7 @@ class AdminResultController extends BaseAdminController
             return $this->response->setJSON(['success' => false, 'message' => 'Session ID tidak valid']);
         }
 
-        if ($this->examResultModel->publishSessionResults($sessionId, $message)) {
+        if ($this->examResultService->publishSessionResults($sessionId, $message)) {
             // Send notification to students
             $this->sendResultNotifications($sessionId);
 
