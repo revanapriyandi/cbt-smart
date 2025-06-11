@@ -91,12 +91,14 @@
     }
 
     .nav-item-hover:hover {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.15);
         transform: translateX(2px);
+        color: #fff;
     }
 
     .nav-item-active {
-        background: rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.25);
+        color: #fff;
     }
 
     /* Tooltip for collapsed sidebar */
