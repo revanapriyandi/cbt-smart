@@ -764,8 +764,19 @@ class AdminClassController extends BaseAdminController
         $capacity = $class['capacity'];
         $capacityUsage = $capacity > 0 ? round(($studentCount / $capacity) * 100, 1) : 0;
 
-        // Get active exams for this class (would need ExamModel for real implementation)
-        $activeExams = 0; // Placeholder - implement when ExamModel is available
+        // Count active exam sessions for this class
+        $examSessionModel = new \App\Models\ExamSessionModel();
+        try {
+            $activeExams = $examSessionModel
+                ->join('exams', 'exams.id = exam_sessions.exam_id')
+                ->where('exam_sessions.class_id', $id)
+                ->where('exam_sessions.status', 'active')
+                ->where('exams.is_active', 1)
+                ->countAllResults();
+        } catch (\Exception $e) {
+            log_message('error', 'Failed to count active exams for class: ' . $e->getMessage());
+            $activeExams = 0;
+        }
 
         return $this->response->setJSON([
             'success' => true,
