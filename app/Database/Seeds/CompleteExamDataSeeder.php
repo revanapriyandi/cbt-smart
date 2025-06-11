@@ -906,17 +906,22 @@ class CompleteExamDataSeeder extends Seeder
                     'title' => 'Ulangan Harian ' . $subject->name . ' Bab 1',
                     'description' => 'Ulangan harian ' . $subject->name . ' untuk mengukur pemahaman materi bab 1',
                     'subject_id' => $subject->id,
-                    'exam_type_id' => $uhType->id,
-                    'created_by' => $teacher->id,
+                    'exam_type_id'   => $uhType->id,
+                    'teacher_id'     => $teacher->id,
+                    'question_count' => 20,
+                    'total_questions'=> 20,
                     'duration_minutes' => 60,
-                    'total_questions' => 20,
-                    'passing_score' => 75,
-                    'max_attempts' => 1,
-                    'is_active' => 1,
-                    'is_published' => 1,
-                    'instructions' => 'Bacalah soal dengan teliti sebelum menjawab. Pilih jawaban yang paling tepat.',
-                    'created_at' => date('Y-m-d H:i:s'),
-                    'updated_at' => date('Y-m-d H:i:s')
+                    'duration'       => 60,
+                    'start_time'     => ($start = date('Y-m-d H:i:s', strtotime('+' . rand(1, 5) . ' days'))),
+                    'end_time'       => date('Y-m-d H:i:s', strtotime($start . ' +60 minutes')),
+                    'passing_score'  => 75,
+                    'max_attempts'   => 1,
+                    'shuffle_questions' => 1,
+                    'show_results'   => 'immediately',
+                    'status'         => 'published',
+                    'is_active'      => 1,
+                    'created_at'     => date('Y-m-d H:i:s'),
+                    'updated_at'     => date('Y-m-d H:i:s')
                 ];
             }
 
@@ -934,17 +939,22 @@ class CompleteExamDataSeeder extends Seeder
                     'title' => 'Ujian Tengah Semester ' . $subject->name,
                     'description' => 'Ujian tengah semester ' . $subject->name . ' semester ganjil',
                     'subject_id' => $subject->id,
-                    'exam_type_id' => $utsType->id,
-                    'created_by' => $teacher->id,
+                    'exam_type_id'   => $utsType->id,
+                    'teacher_id'     => $teacher->id,
+                    'question_count' => 30,
+                    'total_questions'=> 30,
                     'duration_minutes' => 90,
-                    'total_questions' => 30,
-                    'passing_score' => 70,
-                    'max_attempts' => 1,
-                    'is_active' => 1,
-                    'is_published' => 1,
-                    'instructions' => 'Ujian terdiri dari 30 soal pilihan ganda. Waktu pengerjaan 90 menit.',
-                    'created_at' => date('Y-m-d H:i:s'),
-                    'updated_at' => date('Y-m-d H:i:s')
+                    'duration'       => 90,
+                    'start_time'     => ($start = date('Y-m-d H:i:s', strtotime('+' . rand(6, 10) . ' days'))),
+                    'end_time'       => date('Y-m-d H:i:s', strtotime($start . ' +90 minutes')),
+                    'passing_score'  => 70,
+                    'max_attempts'   => 1,
+                    'shuffle_questions' => 1,
+                    'show_results'   => 'immediately',
+                    'status'         => 'published',
+                    'is_active'      => 1,
+                    'created_at'     => date('Y-m-d H:i:s'),
+                    'updated_at'     => date('Y-m-d H:i:s')
                 ];
             }
         }
@@ -982,7 +992,6 @@ class CompleteExamDataSeeder extends Seeder
                     'end_time' => $endTime,
                     'status' => rand(0, 1) ? 'scheduled' : 'active',
                     'max_participants' => $class->capacity,
-                    'is_active' => 1,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
@@ -1018,19 +1027,21 @@ class CompleteExamDataSeeder extends Seeder
             foreach ($students as $student) {
                 $participantData = [
                     'exam_session_id' => $session->id,
-                    'student_id' => $student->user_id,
-                    'status' => $this->getRandomParticipantStatus(),
-                    'started_at' => null,
-                    'finished_at' => null,
-                    'registered_at' => date('Y-m-d H:i:s'),
-                    'created_at' => date('Y-m-d H:i:s'),
-                    'updated_at' => date('Y-m-d H:i:s')
+                    'exam_id'        => $session->exam_id,
+                    'user_id'        => $student->user_id,
+                    'status'         => $this->getRandomParticipantStatus(),
+                    'started_at'     => null,
+                    'completed_at'   => null,
+                    'submission_time'=> null,
+                    'created_at'     => date('Y-m-d H:i:s'),
+                    'updated_at'     => date('Y-m-d H:i:s')
                 ];
 
                 // Set times based on status
                 if ($participantData['status'] == 'completed') {
                     $participantData['started_at'] = date('Y-m-d H:i:s', strtotime($session->start_time . ' +' . rand(0, 10) . ' minutes'));
-                    $participantData['finished_at'] = date('Y-m-d H:i:s', strtotime($participantData['started_at'] . ' +' . rand(30, 60) . ' minutes'));
+                    $participantData['completed_at'] = date('Y-m-d H:i:s', strtotime($participantData['started_at'] . ' +' . rand(30, 60) . ' minutes'));
+                    $participantData['submission_time'] = $participantData['completed_at'];
                 } elseif ($participantData['status'] == 'in_progress') {
                     $participantData['started_at'] = date('Y-m-d H:i:s', strtotime($session->start_time . ' +' . rand(0, 10) . ' minutes'));
                 }
@@ -1090,32 +1101,31 @@ class CompleteExamDataSeeder extends Seeder
             $score = round(($correctAnswers / $participant->total_questions) * 100, 2);
             $grade = $this->calculateGrade($score);
 
+            $maxScore = $participant->total_questions * 10;
+            $totalScore = $correctAnswers * 10;
             $resultData = [
-                'exam_participant_id' => $participant->id,
-                'student_id' => $participant->student_id,
-                'exam_id' => $participant->exam_id,
-                'total_questions' => $participant->total_questions,
-                'answered_questions' => $correctAnswers + rand(0, $participant->total_questions - $correctAnswers),
-                'correct_answers' => $correctAnswers,
-                'wrong_answers' => $participant->total_questions - $correctAnswers,
-                'score' => $score,
-                'grade' => $grade,
-                'passed' => $score >= $participant->passing_score ? 1 : 0,
-                'time_spent_minutes' => rand(30, 90),
-                'submitted_at' => $participant->finished_at,
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
+                'exam_id'       => $participant->exam_id,
+                'student_id'    => $participant->user_id,
+                'total_score'   => $totalScore,
+                'max_total_score' => $maxScore,
+                'percentage'    => round(($totalScore / $maxScore) * 100, 2),
+                'status'        => 'graded',
+                'started_at'    => $participant->started_at,
+                'submitted_at'  => $participant->completed_at,
+                'graded_at'     => date('Y-m-d H:i:s'),
+                'created_at'    => date('Y-m-d H:i:s'),
+                'updated_at'    => date('Y-m-d H:i:s')
             ];
 
             $this->db->table('exam_results')->insert($resultData);
             $resultCount++;
 
             // Create sample student answers
-            $this->createSampleAnswers($participant->exam_id, $participant->student_id, $participant->id, $correctAnswers);
+            $this->createSampleAnswers($participant->exam_id, $participant->user_id, $participant->total_questions);
             $answerCount += $participant->total_questions;
 
             // Create activity logs
-            $this->createActivityLogs($participant->id, $participant->student_id);
+            $this->createActivityLogs($participant->exam_id, $participant->user_id);
             $logCount += rand(5, 15);
         }
 
@@ -1137,86 +1147,25 @@ class CompleteExamDataSeeder extends Seeder
     /**
      * Create sample student answers
      */
-    private function createSampleAnswers($examId, $studentId, $participantId, $correctAnswers)
+    private function createSampleAnswers($examId, $studentId, $questionTotal)
     {
-        // Get questions for this exam
-        $questions = $this->db->table('exam_questions eq')
-            ->join('questions q', 'q.id = eq.question_id')
-            ->where('eq.exam_id', $examId)
-            ->select('q.id as question_id')
-            ->get()
-            ->getResult();
-
-        if (empty($questions)) {
-            // If no exam_questions exist, get questions from question bank
-            $exam = $this->db->table('exams')->where('id', $examId)->get()->getRow();
-            if ($exam) {
-                $questions = $this->db->table('questions q')
-                    ->join('question_banks qb', 'qb.id = q.question_bank_id')
-                    ->where('qb.subject_id', $exam->subject_id)
-                    ->select('q.id as question_id')
-                    ->limit($exam->total_questions)
-                    ->get()
-                    ->getResult();
-            }
-        }
-
-        $correctCount = 0;
-        foreach ($questions as $index => $question) {
-            // Get options for this question
-            $options = $this->db->table('question_options')
-                ->where('question_id', $question->question_id)
-                ->get()
-                ->getResult();
-
-            if (empty($options)) continue;
-
-            // Determine if this answer should be correct
-            $shouldBeCorrect = $correctCount < $correctAnswers;
-
-            if ($shouldBeCorrect) {
-                // Find correct option
-                $selectedOption = null;
-                foreach ($options as $option) {
-                    if ($option->is_correct) {
-                        $selectedOption = $option->id;
-                        break;
-                    }
-                }
-                $correctCount++;
-            } else {
-                // Select random wrong option
-                $wrongOptions = array_filter($options, function ($opt) {
-                    return !$opt->is_correct;
-                });
-                if (!empty($wrongOptions)) {
-                    $selectedOption = $wrongOptions[array_rand($wrongOptions)]->id;
-                } else {
-                    $selectedOption = $options[0]->id;
-                }
-            }
-
-            if ($selectedOption) {
-                $answerData = [
-                    'exam_participant_id' => $participantId,
-                    'student_id' => $studentId,
-                    'question_id' => $question->question_id,
-                    'selected_option_id' => $selectedOption,
-                    'is_correct' => $shouldBeCorrect ? 1 : 0,
-                    'answered_at' => date('Y-m-d H:i:s', strtotime('-' . rand(1, 60) . ' minutes')),
-                    'created_at' => date('Y-m-d H:i:s'),
-                    'updated_at' => date('Y-m-d H:i:s')
-                ];
-
-                $this->db->table('student_answers')->insert($answerData);
-            }
+        for ($i = 1; $i <= $questionTotal; $i++) {
+            $answerData = [
+                'exam_id'        => $examId,
+                'student_id'     => $studentId,
+                'question_number'=> $i,
+                'answer_text'    => 'Jawaban contoh nomor ' . $i,
+                'created_at'     => date('Y-m-d H:i:s'),
+                'updated_at'     => date('Y-m-d H:i:s')
+            ];
+            $this->db->table('student_answers')->insert($answerData);
         }
     }
 
     /**
      * Create activity logs
      */
-    private function createActivityLogs($participantId, $studentId)
+    private function createActivityLogs($examId, $studentId)
     {
         $activities = [
             'exam_started' => 'Siswa memulai ujian',
@@ -1230,14 +1179,11 @@ class CompleteExamDataSeeder extends Seeder
         foreach ($activities as $activity => $description) {
             if (rand(0, 1)) { // 50% chance to create each activity
                 $logData = [
-                    'exam_participant_id' => $participantId,
+                    'exam_id'    => $examId,
                     'student_id' => $studentId,
-                    'activity_type' => $activity,
-                    'description' => $description,
-                    'ip_address' => $this->generateRandomIP(),
-                    'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    'created_at' => date('Y-m-d H:i:s', strtotime('-' . rand(1, 120) . ' minutes')),
-                    'updated_at' => date('Y-m-d H:i:s')
+                    'event_type' => $activity,
+                    'details'    => $description,
+                    'created_at' => date('Y-m-d H:i:s', strtotime('-' . rand(1, 120) . ' minutes'))
                 ];
 
                 $this->db->table('exam_activity_logs')->insert($logData);
