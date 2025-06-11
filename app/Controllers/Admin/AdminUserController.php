@@ -555,7 +555,7 @@ class AdminUserController extends BaseAdminController
             if ($user['role'] === 'student') {
                 $examStats = $this->examResultModel
                     ->where('student_id', $userId)
-                    ->where('status', 'graded')
+                    ->where('status', EXAM_STATUS_GRADED)
                     ->findAll();
 
                 $totalExams = count($examStats);
@@ -627,7 +627,7 @@ class AdminUserController extends BaseAdminController
                 ->join('exams', 'exams.id = exam_results.exam_id')
                 ->join('subjects', 'subjects.id = exams.subject_id')
                 ->where('exam_results.student_id', $userId)
-                ->where('exam_results.status', 'graded')
+                ->where('exam_results.status', EXAM_STATUS_GRADED)
                 ->orderBy('exam_results.submitted_at', 'DESC')
                 ->limit(10)
                 ->findAll();
@@ -674,13 +674,13 @@ class AdminUserController extends BaseAdminController
 
                 $totalExams = count($examResults);
                 $completedExams = count(array_filter($examResults, function ($result) {
-                    return $result['status'] === 'graded';
+                    return $result['status'] === EXAM_STATUS_GRADED;
                 }));
                 $averageScore = 0;
 
                 if ($completedExams > 0) {
                     $gradedResults = array_filter($examResults, function ($result) {
-                        return $result['status'] === 'graded' && $result['percentage'] !== null;
+                        return $result['status'] === EXAM_STATUS_GRADED && $result['percentage'] !== null;
                     });
                     if (count($gradedResults) > 0) {
                         $totalScore = array_sum(array_column($gradedResults, 'percentage'));

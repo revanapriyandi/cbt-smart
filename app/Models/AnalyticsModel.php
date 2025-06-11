@@ -229,7 +229,7 @@ class AnalyticsModel extends Model
             $builder->where('er.created_at <=', $endDate);
         }
 
-        $builder->where('er.status', 'graded');
+        $builder->where('er.status', EXAM_STATUS_GRADED);
         $builder->groupBy('grade_range');
         $builder->orderBy('AVG(er.score)', 'DESC');
 
@@ -273,7 +273,7 @@ class AnalyticsModel extends Model
             $builder->where('er.created_at <=', $endDate);
         }
 
-        $builder->where('er.status', 'graded');
+        $builder->where('er.status', EXAM_STATUS_GRADED);
         $builder->groupBy(['u.id', 'u.name', 'u.email', 'c.name']);
         $builder->orderBy('average_score', 'DESC');
 
@@ -309,7 +309,7 @@ class AnalyticsModel extends Model
             $builder->where('er.created_at <=', $endDate);
         }
 
-        $builder->where('er.status', 'graded');
+        $builder->where('er.status', EXAM_STATUS_GRADED);
         $builder->groupBy(['s.id', 's.name', 's.code']);
         $builder->orderBy('average_score', 'DESC');
 
@@ -347,7 +347,7 @@ class AnalyticsModel extends Model
             $builder->where('e.id', $examId);
         }
 
-        $builder->where('er.status', 'graded');
+        $builder->where('er.status', EXAM_STATUS_GRADED);
         $builder->groupBy(['e.id', 'e.title', 'e.total_questions', 'e.duration_minutes']);
         $builder->orderBy('average_score', 'ASC');
 
@@ -384,7 +384,7 @@ class AnalyticsModel extends Model
             $builder->where('er.created_at <=', $endDate);
         }
 
-        $builder->where('er.status', 'graded');
+        $builder->where('er.status', EXAM_STATUS_GRADED);
         $builder->groupBy("DATE_FORMAT(er.created_at, '{$dateFormat}')");
         $builder->orderBy('period', 'ASC');
 

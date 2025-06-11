@@ -68,7 +68,7 @@ class ExamResultModel extends Model
             $data = [
                 'exam_id' => $examId,
                 'student_id' => $studentId,
-                'status' => 'ongoing',
+                'status' => EXAM_STATUS_ONGOING,
                 'started_at' => date('Y-m-d H:i:s')
             ];
             $this->insert($data);
@@ -85,7 +85,7 @@ class ExamResultModel extends Model
         return $this->where('exam_id', $examId)
             ->where('student_id', $studentId)
             ->set([
-                'status' => 'submitted',
+                'status' => EXAM_STATUS_SUBMITTED,
                 'submitted_at' => date('Y-m-d H:i:s')
             ])
             ->update();
@@ -101,7 +101,7 @@ class ExamResultModel extends Model
                 'total_score' => $totalScore,
                 'max_total_score' => $maxTotalScore,
                 'percentage' => $percentage,
-                'status' => 'graded',
+                'status' => EXAM_STATUS_GRADED,
                 'graded_at' => date('Y-m-d H:i:s')
             ])
             ->update();
@@ -111,7 +111,7 @@ class ExamResultModel extends Model
     {
         $result = $this->select('AVG(percentage) as average_score')
             ->where('exam_id', $examId)
-            ->where('status', 'graded')
+            ->where('status', EXAM_STATUS_GRADED)
             ->where('percentage IS NOT NULL')
             ->first();
 
@@ -213,19 +213,19 @@ class ExamResultModel extends Model
     }
     public function getResultStatistics($filters = [])
     {
-        $builder = $this->select('
-                COUNT(*) as total_results,
-                COUNT(CASE WHEN exam_results.status = "graded" THEN 1 END) as graded_count,
-                COUNT(CASE WHEN exam_results.status = "ongoing" THEN 1 END) as ongoing_count,
-                COUNT(CASE WHEN exam_results.status = "submitted" THEN 1 END) as submitted_count,
-                AVG(CASE WHEN exam_results.status = "graded" AND exam_results.percentage IS NOT NULL THEN exam_results.percentage END) as average_score,
-                MAX(CASE WHEN exam_results.status = "graded" AND exam_results.percentage IS NOT NULL THEN exam_results.percentage END) as highest_score,
-                MIN(CASE WHEN exam_results.status = "graded" AND exam_results.percentage IS NOT NULL THEN exam_results.percentage END) as lowest_score,
+        $builder = $this->select(
+                "COUNT(*) as total_results,
+                COUNT(CASE WHEN exam_results.status = '" . EXAM_STATUS_GRADED . "' THEN 1 END) as graded_count,
+                COUNT(CASE WHEN exam_results.status = '" . EXAM_STATUS_ONGOING . "' THEN 1 END) as ongoing_count,
+                COUNT(CASE WHEN exam_results.status = '" . EXAM_STATUS_SUBMITTED . "' THEN 1 END) as submitted_count,
+                AVG(CASE WHEN exam_results.status = '" . EXAM_STATUS_GRADED . "' AND exam_results.percentage IS NOT NULL THEN exam_results.percentage END) as average_score,
+                MAX(CASE WHEN exam_results.status = '" . EXAM_STATUS_GRADED . "' AND exam_results.percentage IS NOT NULL THEN exam_results.percentage END) as highest_score,
+                MIN(CASE WHEN exam_results.status = '" . EXAM_STATUS_GRADED . "' AND exam_results.percentage IS NOT NULL THEN exam_results.percentage END) as lowest_score,
                 COUNT(CASE WHEN exam_results.percentage >= 80 THEN 1 END) as excellent_count,
                 COUNT(CASE WHEN exam_results.percentage >= 70 AND exam_results.percentage < 80 THEN 1 END) as good_count,
                 COUNT(CASE WHEN exam_results.percentage >= 60 AND exam_results.percentage < 70 THEN 1 END) as satisfactory_count,
-                COUNT(CASE WHEN exam_results.percentage < 60 THEN 1 END) as needs_improvement_count
-            ')->join('users', 'users.id = exam_results.student_id')
+                COUNT(CASE WHEN exam_results.percentage < 60 THEN 1 END) as needs_improvement_count"
+            )->join('users', 'users.id = exam_results.student_id')
             ->join('exams', 'exams.id = exam_results.exam_id')
             ->join('subjects', 'subjects.id = exams.subject_id')
             ->join('user_classes', 'user_classes.user_id = users.id', 'left')
@@ -557,7 +557,7 @@ class ExamResultModel extends Model
             'total_score' => $totalScore,
             'max_total_score' => $maxTotalScore,
             'percentage' => round($percentage, 2),
-            'status' => 'graded',
+            'status' => EXAM_STATUS_GRADED,
             'graded_at' => date('Y-m-d H:i:s')
         ]);
     }
