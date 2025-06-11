@@ -103,7 +103,7 @@
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="text-center p-4 bg-green-50 rounded-lg">
-                        <p class="text-2xl font-bold text-green-600"><?= number_format($subject['highest_score'], 1) ?>%</p>
+                        <p class="text-2xl font-bold text-green-600"><?= number_format($subject['highest_score'] ?? 0, 1) ?>%</p>
                         <p class="text-sm text-gray-600">Highest Score</p>
                     </div>
                     <div class="text-center p-4 bg-blue-50 rounded-lg">
@@ -111,7 +111,7 @@
                         <p class="text-sm text-gray-600">Average Score</p>
                     </div>
                     <div class="text-center p-4 bg-orange-50 rounded-lg">
-                        <p class="text-2xl font-bold text-orange-600"><?= number_format($subject['lowest_score'], 1) ?>%</p>
+                        <p class="text-2xl font-bold text-orange-600"><?= number_format($subject['lowest_score'] ?? 0, 1) ?>%</p>
                         <p class="text-sm text-gray-600">Lowest Score</p>
                     </div>
                 </div>

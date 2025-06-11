@@ -7,7 +7,7 @@
             processing: true,
             serverSide: true,
             ajax: {
-                url: '/admin/questions/get-data',
+                url: '<?= base_url('admin/questions/get-data') ?>',
                 type: 'GET',
                 data: function(d) {
                     d.bank_id = $('#bank-filter').val();

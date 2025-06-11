@@ -102,13 +102,13 @@ class AdminQuestionBankController extends BaseController
             $data[] = [
                 'id' => $bank['id'],
                 'name' => $bank['name'],
-                'subject_name' => $bank['subject_name'],
-                'exam_type_name' => $bank['exam_type_name'],
-                'difficulty_level' => $bank['difficulty_level'],
-                'question_count' => $bank['question_count'],
-                'used_count' => $bank['used_count'],
+                'subject_name' => $bank['subject_name'] ?? 'Tidak ada',
+                'exam_type_name' => $bank['exam_type_name'] ?? 'Tidak ada',
+                'difficulty_level' => $bank['difficulty_level'] ?? 'Tidak ada',
+                'question_count' => $bank['question_count'] ?? 0,
+                'used_count' => $bank['used_count'] ?? 0,
                 'status' => $bank['status'],
-                'created_by_name' => $bank['created_by_name'],
+                'created_by_name' => $bank['created_by_name'] ?? 'Tidak diketahui',
                 'created_at' => date('d/m/Y H:i', strtotime($bank['created_at']))
             ];
         }

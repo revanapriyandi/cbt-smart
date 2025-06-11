@@ -89,17 +89,6 @@
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     </div>
 
-                    <!-- Time Limit -->
-                    <div>
-                        <label for="time_limit" class="block text-sm font-medium text-gray-700 mb-2">
-                            Batas Waktu (detik)
-                        </label>
-                        <input type="number" id="time_limit" name="time_limit" min="0"
-                            value="<?= esc($question['time_limit']) ?>"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <p class="text-xs text-gray-500 mt-1">Kosongkan jika menggunakan waktu default ujian</p>
-                    </div>
-
                     <!-- Status -->
                     <div>
                         <label for="status" class="block text-sm font-medium text-gray-700 mb-2">
@@ -285,7 +274,7 @@
                 .then(data => {
                     showLoading(false);
                     submitBtn.disabled = false;
-
+                    console.log(data);
                     if (data.success) {
                         alert('Soal berhasil diperbarui!');
                         window.location.href = '<?= base_url('admin/questions') ?>';

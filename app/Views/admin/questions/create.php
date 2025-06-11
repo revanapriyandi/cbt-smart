@@ -76,15 +76,7 @@
                     <?php endif; ?>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Batas Waktu (detik)</label>
-                    <input type="number" name="time_limit" value="<?= old('time_limit') ?>" min="1"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Kosongkan untuk tanpa batas waktu">
-                    <?php if (isset($errors['time_limit'])): ?>
-                        <p class="text-red-500 text-sm mt-1"><?= $errors['time_limit'] ?></p>
-                    <?php endif; ?>
-                </div>
+
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Status *</label>

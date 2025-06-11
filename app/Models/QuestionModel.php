@@ -89,9 +89,9 @@ class QuestionModel extends Model
             exam_types.name as exam_type_name,
             users.full_name as creator_name
         ')
-            ->join('question_banks', 'question_banks.id = questions.question_bank_id')
-            ->join('subjects', 'subjects.id = question_banks.subject_id')
-            ->join('exam_types', 'exam_types.id = question_banks.exam_type_id')
+            ->join('question_banks', 'question_banks.id = questions.question_bank_id', 'left')
+            ->join('subjects', 'subjects.id = question_banks.subject_id', 'left')
+            ->join('exam_types', 'exam_types.id = question_banks.exam_type_id', 'left')
             ->join('users', 'users.id = questions.created_by', 'left');
 
         // Apply filters

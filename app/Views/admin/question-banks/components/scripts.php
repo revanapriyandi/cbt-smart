@@ -88,6 +88,7 @@
                     url: '<?= base_url('admin/question-banks/data') ?>',
                     type: 'POST',
                     data: function(d) {
+                        console.log(d)
                         d.subject_filter = $('#subject_filter').val();
                         d.exam_type_filter = $('#exam_type_filter').val();
                         d.difficulty_filter = $('#difficulty_filter').val();

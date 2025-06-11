@@ -157,7 +157,6 @@ class AdminQuestionController extends BaseAdminController
             'question_type' => $this->request->getPost('question_type'),
             'difficulty_level' => $this->request->getPost('difficulty_level'),
             'points' => $this->request->getPost('points'),
-            'time_limit' => $this->request->getPost('time_limit'),
             'explanation' => $this->request->getPost('explanation'),
             'status' => $this->request->getPost('status'),
             'created_by' => session('user_id'),
@@ -193,9 +192,24 @@ class AdminQuestionController extends BaseAdminController
                 }
             }
 
+            //jika request ajax
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'success' => true,
+                    'message' => 'Soal berhasil ditambahkan',
+                ]);
+            }
+
             session()->setFlashdata('success', 'Soal berhasil ditambahkan!');
             return redirect()->to('/admin/questions');
         } else {
+            //jika request ajax
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Gagal menambahkan soal'
+                ]);
+            }
             session()->setFlashdata('error', 'Gagal menambahkan soal!');
             return redirect()->back()->withInput();
         }
@@ -248,7 +262,6 @@ class AdminQuestionController extends BaseAdminController
             'question_type' => $this->request->getPost('question_type'),
             'difficulty_level' => $this->request->getPost('difficulty_level'),
             'points' => $this->request->getPost('points'),
-            'time_limit' => $this->request->getPost('time_limit'),
             'explanation' => $this->request->getPost('explanation'),
             'status' => $this->request->getPost('status'),
             'updated_by' => session('user_id')
@@ -285,9 +298,23 @@ class AdminQuestionController extends BaseAdminController
                 }
             }
 
+            //jika request ajax
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'success' => true,
+                    'message' => 'Soal berhasil diperbarui',
+                ]);
+            }
             session()->setFlashdata('success', 'Soal berhasil diperbarui!');
             return redirect()->to('/admin/questions');
         } else {
+            //jika request ajax
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Gagal memperbarui soal'
+                ]);
+            }
             session()->setFlashdata('error', 'Gagal memperbarui soal!');
             return redirect()->back()->withInput();
         }
