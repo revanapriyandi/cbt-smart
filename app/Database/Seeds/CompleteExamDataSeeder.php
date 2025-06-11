@@ -638,18 +638,16 @@ class CompleteExamDataSeeder extends Seeder
     }
 
     /**
-     * Create Questions and Options
+     * Create Questions (Essay type)
      */
     private function createQuestionsAndOptions()
     {
-        echo "Creating Questions and Options...\n";
+        echo "Creating Essay Questions...\n";
 
         $questionBanks = $this->db->table('question_banks')->get()->getResult();
         $subjects = $this->db->table('subjects')->get()->getResult();
 
         $questionCount = 0;
-        $optionCount = 0;
-
         foreach ($questionBanks as $bank) {
             // Find subject for this bank
             $subject = null;
@@ -664,11 +662,12 @@ class CompleteExamDataSeeder extends Seeder
             $level = strpos($bank->name, 'VII') !== false ? 'VII' : 'VIII';
             $questions = $this->getQuestionsForSubject($subject->code, $level);
 
-            foreach ($questions as $questionData) {                // Insert question
+            foreach ($questions as $questionData) {
+                // Insert question
                 $questionInsert = [
                     'question_bank_id' => $bank->id,
                     'question_text' => $questionData['question'],
-                    'question_type' => 'multiple_choice',
+                    'question_type' => 'essay',
                     'difficulty_level' => $questionData['difficulty'],
                     'points' => $questionData['points'],
                     'explanation' => $questionData['explanation'] ?? null,
@@ -679,27 +678,13 @@ class CompleteExamDataSeeder extends Seeder
                 ];
 
                 $this->db->table('questions')->insert($questionInsert);
-                $questionId = $this->db->insertID();
                 $questionCount++;
 
-                // Insert options
-                foreach ($questionData['options'] as $index => $option) {
-                    $optionInsert = [
-                        'question_id' => $questionId,
-                        'option_text' => $option,
-                        'is_correct' => ($index == $questionData['correct_answer']) ? 1 : 0,
-                        'order_number' => $index + 1,
-                        'created_at' => date('Y-m-d H:i:s'),
-                        'updated_at' => date('Y-m-d H:i:s')
-                    ];
-
-                    $this->db->table('question_options')->insert($optionInsert);
-                    $optionCount++;
-                }
+                // For essay questions there are no options
             }
         }
 
-        echo "Created {$questionCount} questions with {$optionCount} options\n";
+        echo "Created {$questionCount} essay questions\n";
     }
 
     /**
