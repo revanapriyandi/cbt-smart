@@ -153,41 +153,58 @@ admin_user,admin@example.com,Admin User,admin</pre>
         // Create FormData
         const formData = new FormData(this);
 
-        // Simulate progress (replace with actual AJAX call)
-        let progress = 0;
         const progressBar = document.getElementById('progressBar');
         const progressText = document.getElementById('progressText');
+        const progressResults = document.getElementById('progressResults');
 
-        const interval = setInterval(() => {
-            progress += 10;
-            progressBar.style.width = progress + '%';
-            progressText.textContent = `Processing... ${progress}%`;
-
-            if (progress >= 100) {
-                clearInterval(interval);
-                progressText.textContent = 'Import completed successfully!';
-
-                // Redirect after a delay
-                setTimeout(() => {
-                    window.location.href = '<?= base_url('admin/users') ?>';
-                }, 2000);
-            }
-        }, 200);
-
-        // TODO: Replace with actual fetch call to import endpoint
-        /*
         fetch('<?= base_url('admin/users/import') ?>', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Handle response
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-        */
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                progressBar.style.width = '100%';
+
+                if (data.success) {
+                    progressText.textContent = 'Import completed successfully!';
+
+                    progressResults.innerHTML = `
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <h4 class="text-sm font-medium text-green-800">Result</h4>
+                        <p class="text-sm text-green-700 mt-1">${data.message}</p>
+                    </div>
+                `;
+
+                    setTimeout(() => {
+                        window.location.href = '<?= base_url('admin/users') ?>';
+                    }, 3000);
+                } else {
+                    progressBar.classList.remove('bg-green-600');
+                    progressBar.classList.add('bg-red-600');
+                    progressText.textContent = 'Import failed!';
+
+                    progressResults.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <h4 class="text-sm font-medium text-red-800">Error</h4>
+                        <p class="text-sm text-red-700 mt-1">${data.message}</p>
+                    </div>
+                `;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                progressBar.style.width = '100%';
+                progressBar.classList.remove('bg-green-600');
+                progressBar.classList.add('bg-red-600');
+                progressText.textContent = 'Import failed!';
+
+                progressResults.innerHTML = `
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-red-800">Error</h4>
+                    <p class="text-sm text-red-700 mt-1">An error occurred while importing users</p>
+                </div>
+            `;
+            });
     });
 </script>
 <?= $this->endSection() ?>
