@@ -1,6 +1,6 @@
 <!-- Student Dashboard -->
 <div class="tooltip">
-    <a href="/student/dashboard"
+    <a href="<?= base_url('student/dashboard') ?>"
         class="flex items-center py-3 mb-2 rounded-lg nav-item-hover <?= uri_string() === 'student/dashboard' ? 'nav-item-active' : '' ?>"
         :class="{ 
             'justify-center px-2': sidebarCollapsed && window.innerWidth >= 1024,
@@ -17,7 +17,7 @@
 
 <!-- Available Exams -->
 <div class="tooltip">
-    <a href="/student/exams"
+    <a href="<?= base_url('student/exams') ?>"
         class="flex items-center py-3 mb-2 rounded-lg nav-item-hover <?= strpos(uri_string(), 'student/exams') === 0 ? 'nav-item-active' : '' ?>"
         :class="{ 
             'justify-center px-2': sidebarCollapsed && window.innerWidth >= 1024,
@@ -34,7 +34,7 @@
 
 <!-- Student Results -->
 <div class="tooltip">
-    <a href="/student/results"
+    <a href="<?= base_url('student/results') ?>"
         class="flex items-center py-3 mb-2 rounded-lg nav-item-hover <?= strpos(uri_string(), 'student/results') === 0 ? 'nav-item-active' : '' ?>"
         :class="{ 
             'justify-center px-2': sidebarCollapsed && window.innerWidth >= 1024,
@@ -51,7 +51,7 @@
 
 <!-- My Profile -->
 <div class="tooltip">
-    <a href="/student/profile"
+    <a href="<?= base_url('student/profile') ?>"
         class="flex items-center py-3 mb-2 rounded-lg nav-item-hover <?= strpos(uri_string(), 'student/profile') === 0 ? 'nav-item-active' : '' ?>"
         :class="{ 
             'justify-center px-2': sidebarCollapsed && window.innerWidth >= 1024,

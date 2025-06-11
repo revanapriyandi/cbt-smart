@@ -1,6 +1,6 @@
 <!-- Teacher Dashboard -->
 <div class="tooltip">
-    <a href="/teacher/dashboard"
+    <a href="<?= base_url('teacher/dashboard') ?>"
         class="flex items-center py-3 mb-2 rounded-lg nav-item-hover <?= uri_string() === 'teacher/dashboard' ? 'nav-item-active' : '' ?>"
         :class="{ 
             'justify-center px-2': sidebarCollapsed && window.innerWidth >= 1024,
@@ -17,7 +17,7 @@
 
 <!-- Teacher Exams -->
 <div class="tooltip">
-    <a href="/teacher/exams"
+    <a href="<?= base_url('teacher/exams') ?>"
         class="flex items-center py-3 mb-2 rounded-lg nav-item-hover <?= strpos(uri_string(), 'teacher/exams') === 0 ? 'nav-item-active' : '' ?>"
         :class="{ 
             'justify-center px-2': sidebarCollapsed && window.innerWidth >= 1024,
@@ -34,7 +34,7 @@
 
 <!-- Question Banks -->
 <div class="tooltip">
-    <a href="/teacher/question-banks"
+    <a href="<?= base_url('teacher/question-banks') ?>"
         class="flex items-center py-3 mb-2 rounded-lg nav-item-hover <?= strpos(uri_string(), 'teacher/question-banks') === 0 ? 'nav-item-active' : '' ?>"
         :class="{ 
             'justify-center px-2': sidebarCollapsed && window.innerWidth >= 1024,
@@ -51,7 +51,7 @@
 
 <!-- Results -->
 <div class="tooltip">
-    <a href="/teacher/results"
+    <a href="<?= base_url('teacher/results') ?>"
         class="flex items-center py-3 mb-2 rounded-lg nav-item-hover <?= strpos(uri_string(), 'teacher/results') === 0 ? 'nav-item-active' : '' ?>"
         :class="{ 
             'justify-center px-2': sidebarCollapsed && window.innerWidth >= 1024,

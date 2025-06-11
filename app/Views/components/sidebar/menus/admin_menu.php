@@ -1,5 +1,5 @@
 <!-- Dashboard -->
-<a href="/admin/dashboard"
+<a href="<?= base_url('admin/dashboard') ?>"
     class="flex items-center py-3 mb-2 rounded-lg nav-item-hover <?= uri_string() === 'admin/dashboard' ? 'nav-item-active' : '' ?>"
     :class="{ 
                         'justify-center px-2': sidebarCollapsed && window.innerWidth >= 1024,
@@ -35,22 +35,22 @@
         x-transition:enter-start="opacity-0 transform -translate-y-2"
         x-transition:enter-end="opacity-100 transform translate-y-0"
         class="mt-1 ml-6 space-y-1">
-        <a href="/admin/users"
+        <a href="<?= base_url('admin/users') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= uri_string() === 'admin/users' ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-list w-4 mr-3"></i>
             Semua User
         </a>
-        <a href="/admin/users/admins"
+        <a href="<?= base_url('admin/users/admins') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= uri_string() === 'admin/users/admins' ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-user-shield w-4 mr-3"></i>
             Administrator
         </a>
-        <a href="/admin/users/teachers"
+        <a href="<?= base_url('admin/users/teachers') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= uri_string() === 'admin/users/teachers' ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-chalkboard-teacher w-4 mr-3"></i>
             Guru
         </a>
-        <a href="/admin/users/students"
+        <a href="<?= base_url('admin/users/students') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= uri_string() === 'admin/users/students' ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-user-graduate w-4 mr-3"></i>
             Siswa
@@ -80,22 +80,22 @@
         x-transition:enter-start="opacity-0 transform -translate-y-2"
         x-transition:enter-end="opacity-100 transform translate-y-0"
         class="mt-1 ml-6 space-y-1">
-        <a href="/admin/subjects"
+        <a href="<?= base_url('admin/subjects') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= strpos(uri_string(), 'admin/subjects') === 0 ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-book w-4 mr-3"></i>
             Mata Pelajaran
         </a>
-        <a href="/admin/classes"
+        <a href="<?= base_url('admin/classes') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= strpos(uri_string(), 'admin/classes') === 0 ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-chalkboard w-4 mr-3"></i>
             Kelas
         </a>
-        <a href="/admin/academic-years"
+        <a href="<?= base_url('admin/academic-years') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= strpos(uri_string(), 'admin/academic-years') === 0 ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-calendar-alt w-4 mr-3"></i>
             Tahun Ajaran
         </a>
-        <a href="/admin/schedules"
+        <a href="<?= base_url('admin/schedules') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= strpos(uri_string(), 'admin/schedules') === 0 ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-clock w-4 mr-3"></i>
             Jadwal
@@ -125,26 +125,26 @@
         x-transition:enter-start="opacity-0 transform -translate-y-2"
         x-transition:enter-end="opacity-100 transform translate-y-0"
         class="mt-1 ml-6 space-y-1">
-        <a href="/admin/exams"
+        <a href="<?= base_url('admin/exams') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= uri_string() === 'admin/exams' ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-list w-4 mr-3"></i>
             Semua Ujian
         </a>
-        <a href="/admin/exam-types"
+        <a href="<?= base_url('admin/exam-types') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= strpos(uri_string(), 'admin/exam-types') === 0 ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-tags w-4 mr-3"></i>
             Jenis Ujian
-        </a> <a href="/admin/question-banks"
+        </a> <a href="<?= base_url('admin/question-banks') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= strpos(uri_string(), 'admin/question-banks') === 0 ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-database w-4 mr-3"></i>
             Bank Soal
         </a>
-        <a href="/admin/questions"
+        <a href="<?= base_url('admin/questions') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= strpos(uri_string(), 'admin/questions') === 0 ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-question-circle w-4 mr-3"></i>
             Kelola Soal
         </a>
-        <a href="/admin/exam-sessions"
+        <a href="<?= base_url('admin/exam-sessions') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= strpos(uri_string(), 'admin/exam-sessions') === 0 ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-play-circle w-4 mr-3"></i>
             Sesi Ujian
@@ -174,22 +174,22 @@
         x-transition:enter-start="opacity-0 transform -translate-y-2"
         x-transition:enter-end="opacity-100 transform translate-y-0"
         class="mt-1 ml-6 space-y-1">
-        <a href="/admin/monitoring/live"
+        <a href="<?= base_url('admin/monitoring/live') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= strpos(uri_string(), 'admin/monitoring/live') === 0 ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-eye w-4 mr-3"></i>
             Monitor Live
         </a>
-        <a href="/admin/results"
+        <a href="<?= base_url('admin/results') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= strpos(uri_string(), 'admin/results') === 0 ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-poll w-4 mr-3"></i>
             Hasil Ujian
         </a>
-        <a href="/admin/analytics"
+        <a href="<?= base_url('admin/analytics') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= strpos(uri_string(), 'admin/analytics') === 0 ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-chart-line w-4 mr-3"></i>
             Analitik
         </a>
-        <a href="/admin/reports"
+        <a href="<?= base_url('admin/reports') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= strpos(uri_string(), 'admin/reports') === 0 ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-file-alt w-4 mr-3"></i>
             Laporan
@@ -218,22 +218,22 @@
         x-transition:enter="transition ease-out duration-200"
         x-transition:enter-start="opacity-0 transform -translate-y-2"
         x-transition:enter-end="opacity-100 transform translate-y-0"
-        class="mt-1 ml-6 space-y-1"> <a href="/admin/security"
+        class="mt-1 ml-6 space-y-1"> <a href="<?= base_url('admin/security') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= strpos(uri_string(), 'admin/security') === 0 ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-lock w-4 mr-3"></i>
             Pengaturan Keamanan
         </a>
-        <a href="/admin/activity-logs"
+        <a href="<?= base_url('admin/activity-logs') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= strpos(uri_string(), 'admin/activity-logs') === 0 ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-history w-4 mr-3"></i>
             Log Aktivitas
         </a>
-        <a href="/admin/backup"
+        <a href="<?= base_url('admin/backup') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= strpos(uri_string(), 'admin/backup') === 0 ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-download w-4 mr-3"></i>
             Backup & Restore
         </a>
-        <a href="/admin/system-settings"
+        <a href="<?= base_url('admin/system-settings') ?>"
             class="flex items-center py-2 px-3 rounded-md text-sm nav-item-hover <?= strpos(uri_string(), 'admin/system-settings') === 0 ? 'text-white bg-white/10' : 'text-gray-300' ?>">
             <i class="fas fa-cogs w-4 mr-3"></i>
             Pengaturan Sistem
