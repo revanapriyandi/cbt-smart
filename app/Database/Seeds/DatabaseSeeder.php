@@ -8,6 +8,9 @@ class DatabaseSeeder extends Seeder
 {
     public function run()
     {
+        // Disable foreign key checks
+        $this->db->query('SET FOREIGN_KEY_CHECKS = 0');
+
         // Clear existing data
         $this->db->table('exam_results')->truncate();
         $this->db->table('student_answers')->truncate();
@@ -15,6 +18,9 @@ class DatabaseSeeder extends Seeder
         $this->db->table('exams')->truncate();
         $this->db->table('subjects')->truncate();
         $this->db->table('users')->truncate();
+
+        // Re-enable foreign key checks
+        $this->db->query('SET FOREIGN_KEY_CHECKS = 1');
 
         // Insert users
         $users = [

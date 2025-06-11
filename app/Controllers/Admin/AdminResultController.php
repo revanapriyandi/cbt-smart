@@ -16,7 +16,6 @@ class AdminResultController extends BaseAdminController
     protected $examSessionModel;
     protected $classModel;
     protected $userModel;
-
     public function __construct()
     {
         parent::__construct();
@@ -54,14 +53,13 @@ class AdminResultController extends BaseAdminController
         $results = $this->examResultModel->getResultsWithDetails($filters);
 
         // Get statistics
-        $statistics = $this->examResultModel->getResultStatistics($filters);
-
-        // Get filter options
+        $statistics = $this->examResultModel->getResultStatistics($filters);        // Get filter options
         $data['results'] = $results;
         $data['statistics'] = $statistics;
         $data['exams'] = $this->examModel->findAll();
         $data['classes'] = $this->classModel->findAll();
         $data['sessions'] = $this->examSessionModel->findAll();
+        $data['filters'] = $filters; // Pass filters to view
 
         return view('admin/results/index', $data);
     }
@@ -118,11 +116,11 @@ class AdminResultController extends BaseAdminController
 
         // Get comparison data
         $comparison = $this->examResultModel->getComparisonData($filters);
-
         $data['analytics'] = $analytics;
         $data['comparison'] = $comparison;
         $data['exams'] = $this->examModel->findAll();
         $data['classes'] = $this->classModel->findAll();
+        $data['filters'] = $filters; // Pass filters to view
 
         return view('admin/results/analytics', $data);
     }

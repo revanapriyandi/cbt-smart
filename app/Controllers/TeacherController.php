@@ -7,6 +7,14 @@ use App\Models\SubjectModel;
 use App\Models\ExamQuestionModel;
 use App\Models\StudentAnswerModel;
 use App\Models\ExamResultModel;
+use App\Models\ClassModel;
+use App\Models\ExamSessionModel;
+use App\Models\ExamParticipantModel;
+use App\Models\UserModel;
+use App\Models\QuestionBankModel;
+use App\Models\ScheduleModel;
+use App\Models\ExamTypeModel;
+use App\Models\UserActivityLogModel;
 use App\Libraries\OpenAIService;
 
 class TeacherController extends BaseController
@@ -16,7 +24,16 @@ class TeacherController extends BaseController
     protected $examQuestionModel;
     protected $studentAnswerModel;
     protected $examResultModel;
+    protected $classModel;
+    protected $examSessionModel;
+    protected $examParticipantModel;
+    protected $userModel;
+    protected $questionBankModel;
+    protected $scheduleModel;
+    protected $examTypeModel;
+    protected $userActivityLogModel;
     protected $openAIService;
+    protected $db;
 
     public function __construct()
     {
@@ -25,25 +42,163 @@ class TeacherController extends BaseController
         $this->examQuestionModel = new ExamQuestionModel();
         $this->studentAnswerModel = new StudentAnswerModel();
         $this->examResultModel = new ExamResultModel();
+        $this->classModel = new ClassModel();
+        $this->examSessionModel = new ExamSessionModel();
+        $this->examParticipantModel = new ExamParticipantModel();
+        $this->userModel = new UserModel();
+        $this->questionBankModel = new QuestionBankModel();
+        $this->scheduleModel = new ScheduleModel();
+        $this->examTypeModel = new ExamTypeModel();
+        $this->userActivityLogModel = new UserActivityLogModel();
         $this->openAIService = new OpenAIService();
+        $this->db = \Config\Database::connect();
+        
+        // Set timezone
+        date_default_timezone_set('Asia/Jakarta');
     }
 
     public function dashboard()
     {
         $teacherId = session()->get('user_id');
+        $currentTime = date('Y-m-d H:i:s');
+
+        // Get teacher info
+        $teacher = $this->userModel->find($teacherId);
+
+        // Get dashboard statistics
+        $totalExams = $this->examModel->where('teacher_id', $teacherId)->countAllResults();
+        $totalSubjects = $this->subjectModel->where('teacher_id', $teacherId)->countAllResults();
+        $activeExams = $this->examModel->where('teacher_id', $teacherId)
+            ->where('is_active', 1)
+            ->where('start_time <=', $currentTime)
+            ->where('end_time >=', $currentTime)
+            ->countAllResults();
+        
+        // Get total students across all classes
+        $totalStudents = $this->db->table('users')
+            ->join('user_classes', 'users.id = user_classes.user_id')
+            ->join('classes', 'user_classes.class_id = classes.id')
+            ->where('users.role', 'student')
+            ->where('classes.teacher_id', $teacherId)
+            ->countAllResults();
+
+        // Get recent exams with more details
+        $recentExams = $this->db->table('exams')
+            ->select('exams.*, subjects.name as subject_name, exam_types.name as exam_type_name')
+            ->join('subjects', 'exams.subject_id = subjects.id', 'left')
+            ->join('exam_types', 'exams.exam_type_id = exam_types.id', 'left')
+            ->where('exams.teacher_id', $teacherId)
+            ->orderBy('exams.created_at', 'DESC')
+            ->limit(5)
+            ->get()
+            ->getResultArray();
+
+        // Get upcoming exams
+        $upcomingExams = $this->db->table('exams')
+            ->select('exams.*, subjects.name as subject_name')
+            ->join('subjects', 'exams.subject_id = subjects.id', 'left')
+            ->where('exams.teacher_id', $teacherId)
+            ->where('exams.start_time >', $currentTime)
+            ->orderBy('exams.start_time', 'ASC')
+            ->limit(5)
+            ->get()
+            ->getResultArray();
+
+        // Get recent results that need grading
+        $pendingGrading = $this->db->table('exam_results')
+            ->select('exam_results.*, exams.title as exam_title, users.name as student_name')
+            ->join('exams', 'exam_results.exam_id = exams.id')
+            ->join('users', 'exam_results.student_id = users.id')
+            ->where('exams.teacher_id', $teacherId)
+            ->where('exam_results.status', 'completed')
+            ->where('exam_results.is_graded', 0)
+            ->orderBy('exam_results.submitted_at', 'DESC')
+            ->limit(10)
+            ->get()
+            ->getResultArray();
+
+        // Get weekly exam performance
+        $weeklyPerformance = $this->getWeeklyExamPerformance($teacherId);
+
+        // Get subject distribution
+        $subjectDistribution = $this->db->table('exams')
+            ->select('subjects.name, COUNT(exams.id) as count')
+            ->join('subjects', 'exams.subject_id = subjects.id')
+            ->where('exams.teacher_id', $teacherId)
+            ->groupBy('subjects.id')
+            ->get()
+            ->getResultArray();
+
+        // Log activity
+        $this->userActivityLogModel->logActivity(
+            $teacherId,
+            'view_dashboard',
+            'Viewed teacher dashboard'
+        );
 
         $data = [
-            'totalExams' => $this->examModel->where('teacher_id', $teacherId)->countAllResults(),
-            'totalSubjects' => $this->subjectModel->where('teacher_id', $teacherId)->countAllResults(),
-            'recentExams' => $this->examModel->getExamsByTeacher($teacherId),
-            'activeExams' => $this->examModel->where('teacher_id', $teacherId)
-                ->where('is_active', 1)
-                ->where('start_time <=', date('Y-m-d H:i:s'))
-                ->where('end_time >=', date('Y-m-d H:i:s'))
-                ->countAllResults()
+            'title' => 'Dashboard Guru',
+            'teacher' => $teacher,
+            'totalExams' => $totalExams,
+            'totalSubjects' => $totalSubjects,
+            'activeExams' => $activeExams,
+            'totalStudents' => $totalStudents,
+            'recentExams' => $recentExams,
+            'upcomingExams' => $upcomingExams,
+            'pendingGrading' => $pendingGrading,
+            'weeklyPerformance' => $weeklyPerformance,
+            'subjectDistribution' => $subjectDistribution
         ];
 
         return view('teacher/dashboard', $data);
+    }
+
+    private function getWeeklyExamPerformance($teacherId)
+    {
+        $endDate = date('Y-m-d');
+        $startDate = date('Y-m-d', strtotime('-6 days', strtotime($endDate)));
+
+        $query = $this->db->table('exam_results')
+            ->select('DATE(submitted_at) as date, COUNT(*) as total_submissions, AVG((total_score/max_total_score)*100) as avg_score')
+            ->join('exams', 'exam_results.exam_id = exams.id')
+            ->where('exams.teacher_id', $teacherId)
+            ->where('exam_results.submitted_at >=', $startDate)
+            ->where('exam_results.submitted_at <=', $endDate . ' 23:59:59')
+            ->groupBy('DATE(submitted_at)')
+            ->get()
+            ->getResultArray();
+
+        // Fill in missing dates
+        $performance = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = date('Y-m-d', strtotime("-$i days"));
+            $dayName = date('D', strtotime($date));
+            
+            $found = false;
+            foreach ($query as $row) {
+                if ($row['date'] == $date) {
+                    $performance[] = [
+                        'date' => $date,
+                        'day' => $dayName,
+                        'submissions' => (int)$row['total_submissions'],
+                        'avg_score' => round((float)$row['avg_score'], 2)
+                    ];
+                    $found = true;
+                    break;
+                }
+            }
+            
+            if (!$found) {
+                $performance[] = [
+                    'date' => $date,
+                    'day' => $dayName,
+                    'submissions' => 0,
+                    'avg_score' => 0
+                ];
+            }
+        }
+
+        return $performance;
     }
 
     public function exams()

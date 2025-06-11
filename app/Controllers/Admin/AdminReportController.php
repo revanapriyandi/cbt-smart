@@ -2,7 +2,6 @@
 
 namespace App\Controllers\Admin;
 
-use App\Controllers\BaseController;
 use App\Models\ExamModel;
 use App\Models\ExamSessionModel;
 use App\Models\ExamParticipantModel;
@@ -10,29 +9,24 @@ use App\Models\ExamResultModel;
 use App\Models\UserModel;
 use App\Models\ClassModel;
 use App\Models\SubjectModel;
-use App\Models\ReportModel;
+use App\Models\UserActivityLogModel;
 
-class AdminReportController extends BaseController
+class AdminReportController extends BaseAdminController
 {
-    protected $examModel;
     protected $examSessionModel;
     protected $examParticipantModel;
-    protected $examResultModel;
-    protected $userModel;
     protected $classModel;
-    protected $subjectModel;
-    protected $reportModel;
+    protected $activityLogModel;
+    protected $db;
 
     public function __construct()
     {
-        $this->examModel = new ExamModel();
+        parent::__construct();
         $this->examSessionModel = new ExamSessionModel();
         $this->examParticipantModel = new ExamParticipantModel();
-        $this->examResultModel = new ExamResultModel();
-        $this->userModel = new UserModel();
         $this->classModel = new ClassModel();
-        $this->subjectModel = new SubjectModel();
-        $this->reportModel = new ReportModel();
+        $this->activityLogModel = new UserActivityLogModel();
+        $this->db = \Config\Database::connect();
     }
 
     /**
@@ -44,7 +38,6 @@ class AdminReportController extends BaseController
         if (!$this->checkPermission('reports_view')) {
             return redirect()->to('/admin')->with('error', 'Akses ditolak');
         }
-
         $data = [
             'title' => 'Reports Management',
             'breadcrumb' => [
@@ -52,7 +45,10 @@ class AdminReportController extends BaseController
                 ['title' => 'Reports', 'url' => '/admin/reports']
             ],
             'report_types' => $this->getReportTypes(),
-            'recent_reports' => $this->getRecentReports(10)
+            'recent_reports' => $this->getRecentReports(10),
+            'classes' => $this->classModel->findAll(),
+            'subjects' => $this->subjectModel->findAll(),
+            'exams' => $this->examModel->where('status', 'active')->findAll()
         ];
 
         return view('admin/reports/index', $data);
@@ -102,16 +98,30 @@ class AdminReportController extends BaseController
             ]
         ];
     }
-
     /**
-     * Get recent reports
+     * Get recent reports from exam results and sessions
      */
     private function getRecentReports($limit = 10)
     {
-        return $this->reportModel
-            ->orderBy('created_at', 'DESC')
-            ->limit($limit)
-            ->findAll();
+        try {
+            // Get recent exam sessions as "reports"
+            $sessions = $this->examSessionModel
+                ->select('exam_sessions.id, exam_sessions.session_name as title, exam_sessions.created_at, exams.title as exam_title, exam_sessions.status')
+                ->join('exams', 'exams.id = exam_sessions.exam_id')
+                ->orderBy('exam_sessions.created_at', 'DESC')
+                ->limit($limit)
+                ->findAll();
+
+            // Add type field for consistency
+            foreach ($sessions as &$session) {
+                $session['type'] = 'exam_session';
+            }
+
+            return $sessions;
+        } catch (\Exception $e) {
+            log_message('error', 'Error fetching recent reports: ' . $e->getMessage());
+            return [];
+        }
     }
 
     /**
@@ -137,7 +147,13 @@ class AdminReportController extends BaseController
 
         return view('admin/reports/generate', $data);
     }
-
+    /**
+     * Create Report (alias for processGeneration for route compatibility)
+     */
+    public function create()
+    {
+        return $this->processGeneration();
+    }
     /**
      * Process Report Generation (AJAX)
      */
@@ -161,23 +177,15 @@ class AdminReportController extends BaseController
             // Generate report based on type
             $reportData = $this->generateReportData($reportType, $filters, $options);
 
-            // Save report to database
-            $reportId = $this->saveReport($reportType, $filters, $options, $reportData);
-
             // Generate file based on format
-            $filePath = $this->generateReportFile($reportData, $format, $reportType, $reportId);
-
-            // Update report with file path
-            $this->reportModel->update($reportId, [
-                'file_path' => $filePath,
-                'status' => 'completed'
-            ]);
+            $filename = $this->generateReportFileName($reportType, $format);
+            $filePath = $this->generateReportFile($reportData, $format, $reportType, $filename);
 
             return $this->response->setJSON([
                 'success' => true,
                 'message' => 'Laporan berhasil dibuat',
-                'report_id' => $reportId,
-                'download_url' => "/admin/reports/download/{$reportId}"
+                'filename' => $filename,
+                'download_url' => "/admin/reports/download/{$filename}"
             ]);
         } catch (\Exception $e) {
             log_message('error', 'Error generating report: ' . $e->getMessage());
@@ -210,261 +218,274 @@ class AdminReportController extends BaseController
                 throw new \Exception('Tipe laporan tidak valid');
         }
     }
-
     /**
      * Generate Exam Results Report
      */
     private function generateExamResultsReport($filters, $options)
     {
-        $builder = $this->examResultModel->builder();
+        try {
+            $examResultModel = new \App\Models\ExamResultModel();
+            $builder = $examResultModel->builder();
 
-        $builder->select("
-            er.id,
-            er.score,
-            er.total_questions,
-            er.correct_answers,
-            er.wrong_answers,
-            er.time_taken,
-            er.status,
-            er.created_at,
-            u.name as student_name,
-            u.email as student_email,
-            c.name as class_name,
-            e.title as exam_title,
-            s.name as subject_name
-        ");
+            $builder->select("
+                exam_results.id,
+                exam_results.total_score as score,
+                exam_results.percentage,
+                exam_results.status,
+                exam_results.created_at,
+                users.name as student_name,
+                users.email as student_email,
+                classes.name as class_name,
+                exams.title as exam_title,
+                subjects.name as subject_name
+            ");
 
-        $builder->join('users u', 'u.id = er.user_id');
-        $builder->join('classes c', 'c.id = u.class_id', 'left');
-        $builder->join('exams e', 'e.id = er.exam_id');
-        $builder->join('subjects s', 's.id = e.subject_id');
+            $builder->join('users', 'users.id = exam_results.student_id');
+            $builder->join('classes', 'classes.id = users.class_id', 'left');
+            $builder->join('exams', 'exams.id = exam_results.exam_id');
+            $builder->join('subjects', 'subjects.id = exams.subject_id');
 
-        // Apply filters
-        if (!empty($filters['start_date'])) {
-            $builder->where('er.created_at >=', $filters['start_date']);
+            // Apply filters
+            if (!empty($filters['start_date'])) {
+                $builder->where('exam_results.created_at >=', $filters['start_date']);
+            }
+
+            if (!empty($filters['end_date'])) {
+                $builder->where('exam_results.created_at <=', $filters['end_date']);
+            }
+
+            if (!empty($filters['class_id'])) {
+                $builder->where('users.class_id', $filters['class_id']);
+            }
+
+            if (!empty($filters['subject_id'])) {
+                $builder->where('subjects.id', $filters['subject_id']);
+            }
+
+            if (!empty($filters['exam_id'])) {
+                $builder->where('exams.id', $filters['exam_id']);
+            }
+
+            $builder->where('exam_results.status', 'graded');
+            $builder->orderBy('exam_results.created_at', 'DESC');
+
+            $results = $builder->get()->getResultArray();
+
+            // Calculate statistics
+            $stats = $this->calculateExamResultsStats($results);
+
+            return [
+                'title' => 'Exam Results Report',
+                'generated_at' => date('Y-m-d H:i:s'),
+                'filters' => $filters,
+                'options' => $options,
+                'statistics' => $stats,
+                'results' => $results
+            ];
+        } catch (\Exception $e) {
+            log_message('error', 'Error generating exam results report: ' . $e->getMessage());
+            throw $e;
         }
-
-        if (!empty($filters['end_date'])) {
-            $builder->where('er.created_at <=', $filters['end_date']);
-        }
-
-        if (!empty($filters['class_id'])) {
-            $builder->where('u.class_id', $filters['class_id']);
-        }
-
-        if (!empty($filters['subject_id'])) {
-            $builder->where('s.id', $filters['subject_id']);
-        }
-
-        if (!empty($filters['exam_id'])) {
-            $builder->where('e.id', $filters['exam_id']);
-        }
-
-        $builder->where('er.status', 'graded');
-        $builder->orderBy('er.created_at', 'DESC');
-
-        $results = $builder->get()->getResultArray();
-
-        // Calculate statistics
-        $stats = $this->calculateExamResultsStats($results);
-
-        return [
-            'title' => 'Exam Results Report',
-            'generated_at' => date('Y-m-d H:i:s'),
-            'filters' => $filters,
-            'options' => $options,
-            'statistics' => $stats,
-            'results' => $results
-        ];
     }
-
     /**
      * Generate Student Performance Report
      */
     private function generateStudentPerformanceReport($filters, $options)
     {
-        $builder = $this->examResultModel->builder();
+        try {
+            $examResultModel = new \App\Models\ExamResultModel();
+            $builder = $examResultModel->builder();
 
-        $builder->select("
-            u.id as student_id,
-            u.name as student_name,
-            u.email as student_email,
-            c.name as class_name,
-            COUNT(er.id) as total_exams,
-            AVG(er.score) as average_score,
-            MAX(er.score) as highest_score,
-            MIN(er.score) as lowest_score,
-            SUM(CASE WHEN er.score >= 75 THEN 1 ELSE 0 END) as passed_exams,
-            SUM(CASE WHEN er.score < 75 THEN 1 ELSE 0 END) as failed_exams
-        ");
+            $builder->select("
+                users.id as student_id,
+                users.name as student_name,
+                users.email as student_email,
+                classes.name as class_name,
+                COUNT(exam_results.id) as total_exams,
+                AVG(exam_results.total_score) as average_score,
+                MAX(exam_results.total_score) as highest_score,
+                MIN(exam_results.total_score) as lowest_score,
+                SUM(CASE WHEN exam_results.percentage >= 75 THEN 1 ELSE 0 END) as passed_exams,
+                SUM(CASE WHEN exam_results.percentage < 75 THEN 1 ELSE 0 END) as failed_exams
+            ");
 
-        $builder->join('users u', 'u.id = er.user_id');
-        $builder->join('classes c', 'c.id = u.class_id', 'left');
+            $builder->join('users', 'users.id = exam_results.student_id');
+            $builder->join('classes', 'classes.id = users.class_id', 'left');
 
-        // Apply filters
-        if (!empty($filters['start_date'])) {
-            $builder->where('er.created_at >=', $filters['start_date']);
-        }
-
-        if (!empty($filters['end_date'])) {
-            $builder->where('er.created_at <=', $filters['end_date']);
-        }
-
-        if (!empty($filters['class_id'])) {
-            $builder->where('u.class_id', $filters['class_id']);
-        }
-
-        $builder->where('er.status', 'graded');
-        $builder->groupBy(['u.id', 'u.name', 'u.email', 'c.name']);
-        $builder->orderBy('average_score', 'DESC');
-
-        $results = $builder->get()->getResultArray();
-
-        // Get detailed performance for each student
-        if (!empty($options['include_detailed'])) {
-            foreach ($results as &$result) {
-                $result['detailed_results'] = $this->getStudentDetailedResults($result['student_id'], $filters);
+            // Apply filters
+            if (!empty($filters['start_date'])) {
+                $builder->where('exam_results.created_at >=', $filters['start_date']);
             }
+
+            if (!empty($filters['end_date'])) {
+                $builder->where('exam_results.created_at <=', $filters['end_date']);
+            }
+
+            if (!empty($filters['class_id'])) {
+                $builder->where('users.class_id', $filters['class_id']);
+            }
+
+            $builder->where('exam_results.status', 'graded');
+            $builder->groupBy(['users.id', 'users.name', 'users.email', 'classes.name']);
+            $builder->orderBy('average_score', 'DESC');
+
+            $results = $builder->get()->getResultArray();
+
+            // Get detailed performance for each student
+            if (!empty($options['include_detailed'])) {
+                foreach ($results as &$result) {
+                    $result['detailed_results'] = $this->getStudentDetailedResults($result['student_id'], $filters);
+                }
+            }
+
+            return [
+                'title' => 'Student Performance Report',
+                'generated_at' => date('Y-m-d H:i:s'),
+                'filters' => $filters,
+                'options' => $options,
+                'results' => $results
+            ];
+        } catch (\Exception $e) {
+            log_message('error', 'Error generating student performance report: ' . $e->getMessage());
+            throw $e;
         }
-
-        return [
-            'title' => 'Student Performance Report',
-            'generated_at' => date('Y-m-d H:i:s'),
-            'filters' => $filters,
-            'options' => $options,
-            'results' => $results
-        ];
     }
-
     /**
      * Generate Exam Analytics Report
      */
     private function generateExamAnalyticsReport($filters, $options)
     {
-        $builder = $this->examResultModel->builder();
+        try {
+            $builder = $this->db->table('exam_results');
 
-        $builder->select("
-            e.id as exam_id,
-            e.title as exam_title,
-            e.total_questions,
-            e.duration_minutes,
-            s.name as subject_name,
-            COUNT(er.id) as total_attempts,
-            AVG(er.score) as average_score,
-            MAX(er.score) as highest_score,
-            MIN(er.score) as lowest_score,
-            STDDEV(er.score) as score_deviation,
-            AVG(er.time_taken) as average_time_taken,
-            SUM(CASE WHEN er.score >= 90 THEN 1 ELSE 0 END) as grade_a,
-            SUM(CASE WHEN er.score >= 80 AND er.score < 90 THEN 1 ELSE 0 END) as grade_b,
-            SUM(CASE WHEN er.score >= 70 AND er.score < 80 THEN 1 ELSE 0 END) as grade_c,
-            SUM(CASE WHEN er.score >= 60 AND er.score < 70 THEN 1 ELSE 0 END) as grade_d,
-            SUM(CASE WHEN er.score < 60 THEN 1 ELSE 0 END) as grade_e
-        ");
+            $builder->select("
+                exams.id as exam_id,
+                exams.title as exam_title,
+                exams.duration_minutes,
+                subjects.name as subject_name,
+                COUNT(exam_results.id) as total_attempts,
+                AVG(exam_results.total_score) as average_score,
+                MAX(exam_results.total_score) as highest_score,
+                MIN(exam_results.total_score) as lowest_score,
+                STDDEV(exam_results.total_score) as score_deviation,
+                SUM(CASE WHEN exam_results.percentage >= 90 THEN 1 ELSE 0 END) as grade_a,
+                SUM(CASE WHEN exam_results.percentage >= 80 AND exam_results.percentage < 90 THEN 1 ELSE 0 END) as grade_b,
+                SUM(CASE WHEN exam_results.percentage >= 70 AND exam_results.percentage < 80 THEN 1 ELSE 0 END) as grade_c,
+                SUM(CASE WHEN exam_results.percentage >= 60 AND exam_results.percentage < 70 THEN 1 ELSE 0 END) as grade_d,
+                SUM(CASE WHEN exam_results.percentage < 60 THEN 1 ELSE 0 END) as grade_e
+            ");
 
-        $builder->join('exams e', 'e.id = er.exam_id');
-        $builder->join('subjects s', 's.id = e.subject_id');
+            $builder->join('exams', 'exams.id = exam_results.exam_id');
+            $builder->join('subjects', 'subjects.id = exams.subject_id');
 
-        // Apply filters
-        if (!empty($filters['start_date'])) {
-            $builder->where('er.created_at >=', $filters['start_date']);
+            // Apply filters
+            if (!empty($filters['start_date'])) {
+                $builder->where('exam_results.created_at >=', $filters['start_date']);
+            }
+
+            if (!empty($filters['end_date'])) {
+                $builder->where('exam_results.created_at <=', $filters['end_date']);
+            }
+
+            if (!empty($filters['subject_id'])) {
+                $builder->where('subjects.id', $filters['subject_id']);
+            }
+
+            if (!empty($filters['exam_id'])) {
+                $builder->where('exams.id', $filters['exam_id']);
+            }
+
+            $builder->where('exam_results.status', 'graded');
+            $builder->groupBy(['exams.id', 'exams.title', 'exams.duration_minutes', 'subjects.name']);
+            $builder->orderBy('average_score', 'ASC');
+
+            $results = $builder->get()->getResultArray();
+
+            // Add difficulty classification
+            foreach ($results as &$result) {
+                $result['difficulty_level'] = $this->classifyExamDifficulty($result['average_score']);
+            }
+
+            return [
+                'title' => 'Exam Analytics Report',
+                'generated_at' => date('Y-m-d H:i:s'),
+                'filters' => $filters,
+                'options' => $options,
+                'results' => $results
+            ];
+        } catch (\Exception $e) {
+            log_message('error', 'Error generating exam analytics report: ' . $e->getMessage());
+            throw $e;
         }
-
-        if (!empty($filters['end_date'])) {
-            $builder->where('er.created_at <=', $filters['end_date']);
-        }
-
-        if (!empty($filters['subject_id'])) {
-            $builder->where('s.id', $filters['subject_id']);
-        }
-
-        if (!empty($filters['exam_id'])) {
-            $builder->where('e.id', $filters['exam_id']);
-        }
-
-        $builder->where('er.status', 'graded');
-        $builder->groupBy(['e.id', 'e.title', 'e.total_questions', 'e.duration_minutes', 's.name']);
-        $builder->orderBy('average_score', 'ASC');
-
-        $results = $builder->get()->getResultArray();
-
-        // Add difficulty classification
-        foreach ($results as &$result) {
-            $result['difficulty_level'] = $this->classifyExamDifficulty($result['average_score']);
-        }
-
-        return [
-            'title' => 'Exam Analytics Report',
-            'generated_at' => date('Y-m-d H:i:s'),
-            'filters' => $filters,
-            'options' => $options,
-            'results' => $results
-        ];
     }
-
     /**
      * Generate Attendance Report
      */
     private function generateAttendanceReport($filters, $options)
     {
-        $builder = $this->examParticipantModel->builder();
+        try {
+            $examParticipantModel = new \App\Models\ExamParticipantModel();
+            $builder = $examParticipantModel->builder();
 
-        $builder->select("
-            es.id as session_id,
-            es.session_name,
-            es.scheduled_date,
-            e.title as exam_title,
-            s.name as subject_name,
-            c.name as class_name,
-            COUNT(ep.id) as total_registered,
-            SUM(CASE WHEN ep.status = 'completed' THEN 1 ELSE 0 END) as completed,
-            SUM(CASE WHEN ep.status = 'absent' THEN 1 ELSE 0 END) as absent,
-            SUM(CASE WHEN ep.status = 'terminated' THEN 1 ELSE 0 END) as terminated
-        ");
+            $builder->select("
+                exam_sessions.id as session_id,
+                exam_sessions.session_name,
+                exam_sessions.start_time as scheduled_date,
+                exams.title as exam_title,
+                subjects.name as subject_name,
+                classes.name as class_name,
+                COUNT(exam_participants.id) as total_registered,
+                SUM(CASE WHEN exam_participants.status = 'completed' THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN exam_participants.status = 'absent' THEN 1 ELSE 0 END) as absent,
+                SUM(CASE WHEN exam_participants.status = 'not_started' THEN 1 ELSE 0 END) as not_started
+            ");
 
-        $builder->join('exam_sessions es', 'es.id = ep.session_id');
-        $builder->join('exams e', 'e.id = es.exam_id');
-        $builder->join('subjects s', 's.id = e.subject_id');
-        $builder->join('users u', 'u.id = ep.user_id');
-        $builder->join('classes c', 'c.id = u.class_id', 'left');
+            $builder->join('exam_sessions', 'exam_sessions.id = exam_participants.exam_session_id');
+            $builder->join('exams', 'exams.id = exam_sessions.exam_id');
+            $builder->join('subjects', 'subjects.id = exams.subject_id');
+            $builder->join('users', 'users.id = exam_participants.user_id');
+            $builder->join('classes', 'classes.id = users.class_id', 'left');
 
-        // Apply filters
-        if (!empty($filters['start_date'])) {
-            $builder->where('es.scheduled_date >=', $filters['start_date']);
+            // Apply filters
+            if (!empty($filters['start_date'])) {
+                $builder->where('exam_sessions.start_time >=', $filters['start_date']);
+            }
+
+            if (!empty($filters['end_date'])) {
+                $builder->where('exam_sessions.start_time <=', $filters['end_date']);
+            }
+
+            if (!empty($filters['class_id'])) {
+                $builder->where('users.class_id', $filters['class_id']);
+            }
+
+            if (!empty($filters['subject_id'])) {
+                $builder->where('subjects.id', $filters['subject_id']);
+            }
+
+            $builder->groupBy(['exam_sessions.id', 'exam_sessions.session_name', 'exam_sessions.start_time', 'exams.title', 'subjects.name', 'classes.name']);
+            $builder->orderBy('exam_sessions.start_time', 'DESC');
+
+            $results = $builder->get()->getResultArray();
+
+            // Calculate attendance percentages
+            foreach ($results as &$result) {
+                $result['attendance_rate'] = $result['total_registered'] > 0 ?
+                    round(($result['completed'] / $result['total_registered']) * 100, 2) : 0;
+            }
+
+            return [
+                'title' => 'Attendance Report',
+                'generated_at' => date('Y-m-d H:i:s'),
+                'filters' => $filters,
+                'options' => $options,
+                'results' => $results
+            ];
+        } catch (\Exception $e) {
+            log_message('error', 'Error generating attendance report: ' . $e->getMessage());
+            throw $e;
         }
-
-        if (!empty($filters['end_date'])) {
-            $builder->where('es.scheduled_date <=', $filters['end_date']);
-        }
-
-        if (!empty($filters['class_id'])) {
-            $builder->where('u.class_id', $filters['class_id']);
-        }
-
-        if (!empty($filters['subject_id'])) {
-            $builder->where('s.id', $filters['subject_id']);
-        }
-
-        $builder->groupBy(['es.id', 'es.session_name', 'es.scheduled_date', 'e.title', 's.name', 'c.name']);
-        $builder->orderBy('es.scheduled_date', 'DESC');
-
-        $results = $builder->get()->getResultArray();
-
-        // Calculate attendance percentages
-        foreach ($results as &$result) {
-            $result['attendance_rate'] = $result['total_registered'] > 0 ?
-                round(($result['completed'] / $result['total_registered']) * 100, 2) : 0;
-        }
-
-        return [
-            'title' => 'Attendance Report',
-            'generated_at' => date('Y-m-d H:i:s'),
-            'filters' => $filters,
-            'options' => $options,
-            'results' => $results
-        ];
     }
-
     /**
      * Generate System Usage Report
      */
@@ -477,7 +498,7 @@ class AdminReportController extends BaseController
         $totalSessions = $this->examSessionModel->countAllResults();
 
         // Usage over time
-        $builder = $this->examSessionModel->builder();
+        $builder = $this->db->table('exam_sessions');
         $builder->select("
             DATE(created_at) as date,
             COUNT(*) as sessions_count,
@@ -515,47 +536,46 @@ class AdminReportController extends BaseController
 
     /**
      * Generate Progress Tracking Report
-     */
-    private function generateProgressTrackingReport($filters, $options)
+     */    private function generateProgressTrackingReport($filters, $options)
     {
-        $builder = $this->examResultModel->builder();
+        $builder = $this->db->table('exam_results');
 
         $builder->select("
-            u.id as student_id,
-            u.name as student_name,
-            c.name as class_name,
-            s.name as subject_name,
-            DATE(er.created_at) as exam_date,
-            er.score,
-            er.exam_id,
-            e.title as exam_title
+            users.id as student_id,
+            users.name as student_name,
+            classes.name as class_name,
+            subjects.name as subject_name,
+            DATE(exam_results.created_at) as exam_date,
+            exam_results.total_score as score,
+            exam_results.exam_id,
+            exams.title as exam_title
         ");
 
-        $builder->join('users u', 'u.id = er.user_id');
-        $builder->join('classes c', 'c.id = u.class_id', 'left');
-        $builder->join('exams e', 'e.id = er.exam_id');
-        $builder->join('subjects s', 's.id = e.subject_id');
+        $builder->join('users', 'users.id = exam_results.student_id');
+        $builder->join('classes', 'classes.id = users.class_id', 'left');
+        $builder->join('exams', 'exams.id = exam_results.exam_id');
+        $builder->join('subjects', 'subjects.id = exams.subject_id');
 
         // Apply filters
         if (!empty($filters['start_date'])) {
-            $builder->where('er.created_at >=', $filters['start_date']);
+            $builder->where('exam_results.created_at >=', $filters['start_date']);
         }
 
         if (!empty($filters['end_date'])) {
-            $builder->where('er.created_at <=', $filters['end_date']);
+            $builder->where('exam_results.created_at <=', $filters['end_date']);
         }
 
         if (!empty($filters['class_id'])) {
-            $builder->where('u.class_id', $filters['class_id']);
+            $builder->where('users.class_id', $filters['class_id']);
         }
 
         if (!empty($filters['subject_id'])) {
-            $builder->where('s.id', $filters['subject_id']);
+            $builder->where('subjects.id', $filters['subject_id']);
         }
 
-        $builder->where('er.status', 'graded');
-        $builder->orderBy('u.name', 'ASC');
-        $builder->orderBy('er.created_at', 'ASC');
+        $builder->where('exam_results.status', 'graded');
+        $builder->orderBy('users.name', 'ASC');
+        $builder->orderBy('exam_results.created_at', 'ASC');
 
         $results = $builder->get()->getResultArray();
 
@@ -600,32 +620,19 @@ class AdminReportController extends BaseController
             'progress_data' => $progressData
         ];
     }
-
     /**
-     * Save report to database
+     * Generate report filename
      */
-    private function saveReport($reportType, $filters, $options, $reportData)
+    private function generateReportFileName($reportType, $format)
     {
-        $reportData = [
-            'report_type' => $reportType,
-            'title' => $reportData['title'],
-            'filters' => json_encode($filters),
-            'options' => json_encode($options),
-            'status' => 'generating',
-            'generated_by' => session()->get('user_id'),
-            'created_at' => date('Y-m-d H:i:s')
-        ];
-
-        return $this->reportModel->insert($reportData);
+        return "report_{$reportType}_" . date('Y-m-d_H-i-s') . ".{$format}";
     }
 
     /**
      * Generate report file
      */
-    private function generateReportFile($reportData, $format, $reportType, $reportId)
+    private function generateReportFile($reportData, $format, $reportType, $filename)
     {
-        $filename = "report_{$reportType}_{$reportId}_" . date('Y-m-d_H-i-s');
-
         switch ($format) {
             case 'pdf':
                 return $this->generatePDFReport($reportData, $filename);
@@ -637,23 +644,16 @@ class AdminReportController extends BaseController
                 throw new \Exception('Format tidak didukung');
         }
     }
-
     /**
      * Download Report
      */
-    public function download($reportId)
+    public function download($filename)
     {
-        $report = $this->reportModel->find($reportId);
-
-        if (!$report) {
-            throw new \CodeIgniter\Exceptions\PageNotFoundException('Laporan tidak ditemukan');
-        }
-
         if (!$this->checkPermission('reports_download')) {
             return redirect()->to('/admin/reports')->with('error', 'Akses ditolak');
         }
 
-        $filePath = WRITEPATH . 'reports/' . $report['file_path'];
+        $filePath = WRITEPATH . 'reports/' . $filename;
 
         if (!file_exists($filePath)) {
             return redirect()->to('/admin/reports')->with('error', 'File laporan tidak ditemukan');
@@ -661,36 +661,52 @@ class AdminReportController extends BaseController
 
         return $this->response->download($filePath, null);
     }
-
     /**
      * Delete Report
      */
-    public function delete($reportId)
+    public function delete($filename)
     {
         if (!$this->checkPermission('reports_delete')) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Akses ditolak'
+                ]);
+            }
             return redirect()->to('/admin/reports')->with('error', 'Akses ditolak');
         }
 
-        $report = $this->reportModel->find($reportId);
+        try {
+            $filePath = WRITEPATH . 'reports/' . $filename;
 
-        if (!$report) {
-            return redirect()->to('/admin/reports')->with('error', 'Laporan tidak ditemukan');
-        }
-
-        // Delete file
-        if ($report['file_path']) {
-            $filePath = WRITEPATH . 'reports/' . $report['file_path'];
-            if (file_exists($filePath)) {
-                unlink($filePath);
+            if (!file_exists($filePath)) {
+                throw new \Exception('File laporan tidak ditemukan');
             }
+
+            // Delete file
+            if (unlink($filePath)) {
+                $message = 'Laporan berhasil dihapus';
+                if ($this->request->isAJAX()) {
+                    return $this->response->setJSON([
+                        'success' => true,
+                        'message' => $message
+                    ]);
+                }
+                return redirect()->to('/admin/reports')->with('success', $message);
+            } else {
+                throw new \Exception('Gagal menghapus file laporan');
+            }
+        } catch (\Exception $e) {
+            $message = 'Gagal menghapus laporan: ' . $e->getMessage();
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => $message
+                ]);
+            }
+            return redirect()->to('/admin/reports')->with('error', $message);
         }
-
-        // Delete from database
-        $this->reportModel->delete($reportId);
-
-        return redirect()->to('/admin/reports')->with('success', 'Laporan berhasil dihapus');
     }
-
     /**
      * Get Reports List (AJAX)
      */
@@ -705,31 +721,47 @@ class AdminReportController extends BaseController
             $length = $this->request->getGet('length') ?? 10;
             $search = $this->request->getGet('search')['value'] ?? '';
 
-            $builder = $this->reportModel->builder();
-            $builder->select('reports.*, users.name as generated_by_name');
-            $builder->join('users', 'users.id = reports.generated_by');
+            // Get generated report files from filesystem
+            $reportsDir = WRITEPATH . 'reports/';
+            $files = [];
 
-            if (!empty($search)) {
-                $builder->groupStart();
-                $builder->like('reports.title', $search);
-                $builder->orLike('reports.report_type', $search);
-                $builder->orLike('users.name', $search);
-                $builder->groupEnd();
+            if (is_dir($reportsDir)) {
+                $fileList = scandir($reportsDir);
+                foreach ($fileList as $file) {
+                    if ($file !== '.' && $file !== '..' && !is_dir($reportsDir . $file)) {
+                        $filePath = $reportsDir . $file;
+                        $fileInfo = [
+                            'filename' => $file,
+                            'title' => $this->getReportTitleFromFilename($file),
+                            'report_type' => $this->getReportTypeFromFilename($file),
+                            'created_at' => date('Y-m-d H:i:s', filemtime($filePath)),
+                            'file_size' => filesize($filePath),
+                            'status' => 'completed'
+                        ];
+
+                        if (
+                            empty($search) ||
+                            stripos($fileInfo['title'], $search) !== false ||
+                            stripos($fileInfo['report_type'], $search) !== false
+                        ) {
+                            $files[] = $fileInfo;
+                        }
+                    }
+                }
             }
 
-            $totalRecords = $builder->countAllResults(false);
+            // Sort by creation date (newest first)
+            usort($files, function ($a, $b) {
+                return strtotime($b['created_at']) - strtotime($a['created_at']);
+            });
 
-            $reports = $builder
-                ->orderBy('reports.created_at', 'DESC')
-                ->limit($length, $start)
-                ->get()
-                ->getResultArray();
-
+            $totalRecords = count($files);
+            $files = array_slice($files, $start, $length);
             return $this->response->setJSON([
                 'draw' => intval($this->request->getGet('draw')),
                 'recordsTotal' => $totalRecords,
                 'recordsFiltered' => $totalRecords,
-                'data' => $reports
+                'data' => $files
             ]);
         } catch (\Exception $e) {
             log_message('error', 'Error getting reports list: ' . $e->getMessage());
@@ -775,14 +807,13 @@ class AdminReportController extends BaseController
             'pass_rate' => round($passRate, 2)
         ];
     }
-
     private function getStudentDetailedResults($studentId, $filters)
     {
         $builder = $this->examResultModel->builder();
         $builder->select('exam_results.*, exams.title as exam_title, subjects.name as subject_name');
         $builder->join('exams', 'exams.id = exam_results.exam_id');
         $builder->join('subjects', 'subjects.id = exams.subject_id');
-        $builder->where('exam_results.user_id', $studentId);
+        $builder->where('exam_results.student_id', $studentId);
         $builder->where('exam_results.status', 'graded');
 
         if (!empty($filters['start_date'])) {
@@ -825,15 +856,13 @@ class AdminReportController extends BaseController
         if ($difference < -5) return 'declining';
         return 'stable';
     }
-
     private function generatePDFReport($reportData, $filename)
     {
         // Implement PDF generation using TCPDF or similar
         // This is a placeholder implementation
         $pdfContent = $this->generatePDFContent($reportData);
 
-        $filepath = "reports/{$filename}.pdf";
-        $fullPath = WRITEPATH . $filepath;
+        $fullPath = WRITEPATH . "reports/{$filename}";
 
         // Ensure directory exists
         if (!is_dir(dirname($fullPath))) {
@@ -842,17 +871,15 @@ class AdminReportController extends BaseController
 
         file_put_contents($fullPath, $pdfContent);
 
-        return $filepath;
+        return $filename;
     }
-
     private function generateExcelReport($reportData, $filename)
     {
         // Implement Excel generation using PhpSpreadsheet
         // This is a placeholder implementation
         $excelContent = $this->generateExcelContent($reportData);
 
-        $filepath = "reports/{$filename}.xlsx";
-        $fullPath = WRITEPATH . $filepath;
+        $fullPath = WRITEPATH . "reports/{$filename}";
 
         // Ensure directory exists
         if (!is_dir(dirname($fullPath))) {
@@ -861,15 +888,14 @@ class AdminReportController extends BaseController
 
         file_put_contents($fullPath, $excelContent);
 
-        return $filepath;
+        return $filename;
     }
 
     private function generateCSVReport($reportData, $filename)
     {
         $csvContent = $this->generateCSVContent($reportData);
 
-        $filepath = "reports/{$filename}.csv";
-        $fullPath = WRITEPATH . $filepath;
+        $fullPath = WRITEPATH . "reports/{$filename}";
 
         // Ensure directory exists
         if (!is_dir(dirname($fullPath))) {
@@ -878,7 +904,7 @@ class AdminReportController extends BaseController
 
         file_put_contents($fullPath, $csvContent);
 
-        return $filepath;
+        return $filename;
     }
 
     private function generatePDFContent($reportData)
@@ -915,11 +941,43 @@ class AdminReportController extends BaseController
 
         return $csv;
     }
-
     private function checkPermission($permission)
     {
-        // Implement permission checking logic
-        // This is a placeholder
-        return true;
+        // Check if user is logged in and has admin role
+        $userRole = session()->get('role');
+        return $userRole === 'admin';
+    }
+
+    /**
+     * Get report title from filename
+     */
+    private function getReportTitleFromFilename($filename)
+    {
+        $parts = explode('_', $filename);
+        if (count($parts) >= 2) {
+            $type = $parts[1];
+            $titles = [
+                'exam' => 'Exam Results Report',
+                'student' => 'Student Performance Report',
+                'analytics' => 'Exam Analytics Report',
+                'attendance' => 'Attendance Report',
+                'system' => 'System Usage Report',
+                'progress' => 'Progress Tracking Report'
+            ];
+            return $titles[$type] ?? 'Generated Report';
+        }
+        return 'Generated Report';
+    }
+
+    /**
+     * Get report type from filename
+     */
+    private function getReportTypeFromFilename($filename)
+    {
+        $parts = explode('_', $filename);
+        if (count($parts) >= 2) {
+            return $parts[1];
+        }
+        return 'unknown';
     }
 }

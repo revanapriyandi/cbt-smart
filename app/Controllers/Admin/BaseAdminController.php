@@ -8,6 +8,7 @@ use App\Models\SubjectModel;
 use App\Models\ExamModel;
 use App\Models\ExamResultModel;
 use App\Models\UserActivityLogModel;
+use App\Models\ClassModel;
 
 abstract class BaseAdminController extends BaseController
 {
@@ -16,8 +17,8 @@ abstract class BaseAdminController extends BaseController
     protected $examModel;
     protected $examResultModel;
     protected $userActivityLogModel;
+    protected $classModel;
     protected $db;
-
     public function __construct()
     {
         $this->userModel = new UserModel();
@@ -25,6 +26,7 @@ abstract class BaseAdminController extends BaseController
         $this->examModel = new ExamModel();
         $this->examResultModel = new ExamResultModel();
         $this->userActivityLogModel = new UserActivityLogModel();
+        $this->classModel = new ClassModel();
         $this->db = \Config\Database::connect();
     }
     /**

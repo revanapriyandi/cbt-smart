@@ -323,7 +323,8 @@ class SecuritySettingModel extends Model
      */
     public function getSecurityReportData($dateFrom, $dateTo)
     {
-        $db = \Config\Database::connect();        return $db->table('user_activity_logs')
+        $db = \Config\Database::connect();
+        return $db->table('user_activity_logs')
             ->select('user_activity_logs.*, users.username')
             ->join('users', 'users.id = user_activity_logs.user_id', 'left')
             ->whereIn('activity_type', [
@@ -382,5 +383,262 @@ class SecuritySettingModel extends Model
         }
 
         return true;
+    }
+
+    /**
+     * Add IP to whitelist
+     */
+    public function addToWhitelist($ipAddress)
+    {
+        return $this->updateSetting(
+            'whitelist_ip_' . str_replace('.', '_', $ipAddress),
+            '1',
+            'whitelist',
+            'Whitelisted IP: ' . $ipAddress
+        );
+    }
+
+    /**
+     * Remove IP from whitelist
+     */
+    public function removeFromWhitelist($ipAddress)
+    {
+        $setting = $this->where('setting_key', 'whitelist_ip_' . str_replace('.', '_', $ipAddress))->first();
+        if ($setting) {
+            return $this->delete($setting['id']);
+        }
+        return true;
+    }
+
+    /**
+     * Get whitelisted IPs
+     */
+    public function getWhitelistedIPs()
+    {
+        return $this->where('category', 'whitelist')
+            ->where('setting_value', '1')
+            ->findAll();
+    }
+
+    /**
+     * Terminate user session
+     */
+    public function terminateUserSession($sessionId, $userId)
+    {
+        $db = \Config\Database::connect();
+
+        // First try to find and delete by session ID
+        $result = $db->table('ci_sessions')
+            ->where('id', $sessionId)
+            ->delete();
+
+        // If no direct session ID match, try to find by user data
+        if (!$result) {
+            $sessions = $db->table('ci_sessions')
+                ->where('data LIKE', '%user_id";s:' . strlen($userId) . ':"' . $userId . '"%')
+                ->get()
+                ->getResultArray();
+
+            foreach ($sessions as $session) {
+                $db->table('ci_sessions')->where('id', $session['id'])->delete();
+            }
+
+            return count($sessions) > 0;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Count active sessions
+     */
+    public function countActiveSessions()
+    {
+        $db = \Config\Database::connect();
+
+        return $db->table('ci_sessions')
+            ->where('timestamp >', time() - 7200)
+            ->countAllResults();
+    }
+
+    /**
+     * Count failed login attempts today
+     */
+    public function countFailedAttemptsToday()
+    {
+        $db = \Config\Database::connect();
+
+        return $db->table('user_activity_logs')
+            ->where('activity_type', 'login_failed')
+            ->where('created_at >=', date('Y-m-d 00:00:00'))
+            ->countAllResults();
+    }
+
+    /**
+     * Count blocked IPs
+     */
+    public function countBlockedIPs()
+    {
+        return $this->where('category', 'blocked_ips')
+            ->where('setting_value', '1')
+            ->countAllResults();
+    }
+
+    /**
+     * Get security alerts
+     */
+    public function getSecurityAlerts($limit = 10)
+    {
+        $db = \Config\Database::connect();
+
+        return $db->table('user_activity_logs')
+            ->select('user_activity_logs.*, users.username')
+            ->join('users', 'users.id = user_activity_logs.user_id', 'left')
+            ->whereIn('activity_type', [
+                'login_failed',
+                'account_locked',
+                'suspicious_activity',
+                'security_violation'
+            ])
+            ->where('user_activity_logs.created_at >=', date('Y-m-d H:i:s', strtotime('-24 hours')))
+            ->orderBy('user_activity_logs.created_at', 'DESC')
+            ->limit($limit)
+            ->get()
+            ->getResultArray();
+    }
+
+    /**
+     * Get login trends
+     */
+    public function getLoginTrends($days = 7)
+    {
+        $db = \Config\Database::connect();
+
+        $trends = [];
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $date = date('Y-m-d', strtotime("-{$i} days"));
+
+            $successful = $db->table('user_activity_logs')
+                ->where('activity_type', 'login_success')
+                ->where('DATE(created_at)', $date)
+                ->countAllResults();
+
+            $failed = $db->table('user_activity_logs')
+                ->where('activity_type', 'login_failed')
+                ->where('DATE(created_at)', $date)
+                ->countAllResults();
+
+            $trends[] = [
+                'date' => $date,
+                'successful' => $successful,
+                'failed' => $failed
+            ];
+        }
+
+        return $trends;
+    }
+
+    /**
+     * Calculate security score
+     */
+    public function calculateSecurityScore()
+    {
+        $score = 100;
+
+        // Check password policies
+        $policies = $this->getPasswordPolicies();
+        if ($policies['min_length'] < 8) $score -= 10;
+        if ($policies['require_uppercase'] == '0') $score -= 5;
+        if ($policies['require_lowercase'] == '0') $score -= 5;
+        if ($policies['require_numbers'] == '0') $score -= 5;
+        if ($policies['require_symbols'] == '0') $score -= 10;
+
+        // Check general settings
+        $settings = $this->getAllSettings();
+        if (($settings['general']['two_factor_required'] ?? '0') == '0') $score -= 15;
+        if (($settings['general']['account_lockout_enabled'] ?? '0') == '0') $score -= 10;
+
+        // Check recent security events
+        $recentFailures = $this->countFailedAttemptsToday();
+        if ($recentFailures > 10) $score -= 20;
+        elseif ($recentFailures > 5) $score -= 10;
+
+        return max(0, min(100, $score));
+    }
+
+    /**
+     * Generate security report
+     */
+    public function generateSecurityReport($dateFrom, $dateTo)
+    {
+        $db = \Config\Database::connect();
+
+        $report = [
+            'period' => [
+                'from' => $dateFrom,
+                'to' => $dateTo
+            ],
+            'summary' => [
+                'total_events' => 0,
+                'failed_logins' => 0,
+                'successful_logins' => 0,
+                'account_lockouts' => 0,
+                'security_violations' => 0
+            ],
+            'events' => [],
+            'trends' => [],
+            'top_ips' => []
+        ];
+
+        // Get all security events in the period
+        $events = $this->getSecurityReportData($dateFrom, $dateTo);
+        $report['events'] = $events;
+        $report['summary']['total_events'] = count($events);
+
+        // Calculate summary statistics
+        foreach ($events as $event) {
+            switch ($event['activity_type']) {
+                case 'login_failed':
+                    $report['summary']['failed_logins']++;
+                    break;
+                case 'login_success':
+                    $report['summary']['successful_logins']++;
+                    break;
+                case 'account_locked':
+                    $report['summary']['account_lockouts']++;
+                    break;
+                case 'suspicious_activity':
+                case 'security_violation':
+                    $report['summary']['security_violations']++;
+                    break;
+            }
+        }
+
+        // Get trends data
+        $trendData = $db->table('user_activity_logs')
+            ->select('DATE(created_at) as date, activity_type, COUNT(*) as count')
+            ->whereIn('activity_type', ['login_failed', 'login_success', 'account_locked'])
+            ->where('created_at >=', $dateFrom)
+            ->where('created_at <=', $dateTo)
+            ->groupBy('DATE(created_at), activity_type')
+            ->orderBy('date', 'ASC')
+            ->get()
+            ->getResultArray();
+        $report['trends'] = $trendData;
+
+        // Get top IPs with failed attempts
+        $topIPs = $db->table('user_activity_logs')
+            ->select('ip_address, COUNT(*) as attempts')
+            ->where('activity_type', 'login_failed')
+            ->where('created_at >=', $dateFrom)
+            ->where('created_at <=', $dateTo)
+            ->groupBy('ip_address')
+            ->orderBy('attempts', 'DESC')
+            ->limit(10)
+            ->get()
+            ->getResultArray();
+        $report['top_ips'] = $topIPs;
+
+        return $report;
     }
 }

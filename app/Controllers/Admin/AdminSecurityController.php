@@ -69,11 +69,9 @@ class AdminSecurityController extends BaseController
 
             foreach ($settings as $key => $value) {
                 $this->securityModel->updateSetting($key, $value);
-            }
-
-            // Log security setting change
+            }            // Log security setting change
             $this->activityLogModel->logActivity(
-                session('admin_id'),
+                session()->get('user_id'),
                 'security_settings_updated',
                 'Security settings updated',
                 json_encode($settings)
@@ -116,11 +114,9 @@ class AdminSecurityController extends BaseController
         try {
             $policies = $this->request->getPost();
 
-            $this->securityModel->updatePasswordPolicies($policies);
-
-            // Log password policy change
+            $this->securityModel->updatePasswordPolicies($policies);            // Log password policy change
             $this->activityLogModel->logActivity(
-                session('admin_id'),
+                session()->get('user_id'),
                 'password_policies_updated',
                 'Password policies updated',
                 json_encode($policies)
@@ -162,11 +158,9 @@ class AdminSecurityController extends BaseController
         try {
             $sessionSettings = $this->request->getPost();
 
-            $this->securityModel->updateSessionSettings($sessionSettings);
-
-            // Log session settings change
+            $this->securityModel->updateSessionSettings($sessionSettings);            // Log session settings change
             $this->activityLogModel->logActivity(
-                session('admin_id'),
+                session()->get('user_id'),
                 'session_settings_updated',
                 'Session settings updated',
                 json_encode($sessionSettings)
@@ -214,10 +208,9 @@ class AdminSecurityController extends BaseController
                 $message = 'IP address removed from whitelist successfully';
             }
 
-            if ($result) {
-                // Log IP whitelist change
+            if ($result) {                // Log IP whitelist change
                 $this->activityLogModel->logActivity(
-                    session('admin_id'),
+                    session()->get('user_id'),
                     'ip_whitelist_modified',
                     "IP {$ipAddress} {$action}ed to/from whitelist",
                     json_encode(['action' => $action, 'ip' => $ipAddress])
@@ -257,10 +250,9 @@ class AdminSecurityController extends BaseController
         try {
             $result = $this->securityModel->unblockIP($ipAddress);
 
-            if ($result) {
-                // Log IP unblock
+            if ($result) {                // Log IP unblock
                 $this->activityLogModel->logActivity(
-                    session('admin_id'),
+                    session()->get('user_id'),
                     'ip_unblocked',
                     "IP {$ipAddress} unblocked manually",
                     json_encode(['ip' => $ipAddress])
@@ -301,10 +293,9 @@ class AdminSecurityController extends BaseController
         try {
             $result = $this->securityModel->terminateUserSession($sessionId, $userId);
 
-            if ($result) {
-                // Log session termination
+            if ($result) {                // Log session termination
                 $this->activityLogModel->logActivity(
-                    session('admin_id'),
+                    session()->get('user_id'),
                     'session_terminated',
                     "User session terminated (User ID: {$userId})",
                     json_encode(['session_id' => $sessionId, 'user_id' => $userId])
@@ -386,11 +377,9 @@ class AdminSecurityController extends BaseController
     {
         // Implementation for PDF export using a library like TCPDF or mPDF
         // This is a placeholder - you would implement actual PDF generation
-        $filename = "security_report_{$dateFrom}_to_{$dateTo}.pdf";
-
-        // Log export activity
+        $filename = "security_report_{$dateFrom}_to_{$dateTo}.pdf";        // Log export activity
         $this->activityLogModel->logActivity(
-            session('admin_id'),
+            session()->get('user_id'),
             'security_report_exported',
             "Security report exported (PDF) for period {$dateFrom} to {$dateTo}",
             json_encode(['format' => 'pdf', 'date_from' => $dateFrom, 'date_to' => $dateTo])
@@ -404,11 +393,9 @@ class AdminSecurityController extends BaseController
     {
         // Implementation for Excel export using PhpSpreadsheet
         // This is a placeholder - you would implement actual Excel generation
-        $filename = "security_report_{$dateFrom}_to_{$dateTo}.xlsx";
-
-        // Log export activity
+        $filename = "security_report_{$dateFrom}_to_{$dateTo}.xlsx";        // Log export activity
         $this->activityLogModel->logActivity(
-            session('admin_id'),
+            session()->get('user_id'),
             'security_report_exported',
             "Security report exported (Excel) for period {$dateFrom} to {$dateTo}",
             json_encode(['format' => 'excel', 'date_from' => $dateFrom, 'date_to' => $dateTo])
@@ -442,11 +429,9 @@ class AdminSecurityController extends BaseController
             ]);
         }
 
-        fclose($output);
-
-        // Log export activity
+        fclose($output);        // Log export activity
         $this->activityLogModel->logActivity(
-            session('admin_id'),
+            session()->get('user_id'),
             'security_report_exported',
             "Security report exported (CSV) for period {$dateFrom} to {$dateTo}",
             json_encode(['format' => 'csv', 'date_from' => $dateFrom, 'date_to' => $dateTo])
@@ -454,9 +439,8 @@ class AdminSecurityController extends BaseController
 
         exit;
     }
-
     private function checkAdminPermission()
     {
-        return session('user_type') === 'admin' && session('is_logged_in');
+        return session()->get('role') === 'admin' && session()->get('is_logged_in');
     }
 }

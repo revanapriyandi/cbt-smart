@@ -20,26 +20,26 @@
 <!-- Report Types Cards -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
     <?php foreach ($report_types as $type => $info): ?>
-    <div class="bg-white rounded-lg shadow hover:shadow-md transition-shadow duration-200">
-        <div class="p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="w-10 h-10 bg-<?= $info['color'] ?>-500 rounded-lg flex items-center justify-center">
-                        <i class="<?= $info['icon'] ?> text-white"></i>
+        <div class="bg-white rounded-lg shadow hover:shadow-md transition-shadow duration-200">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 bg-<?= $info['color'] ?>-500 rounded-lg flex items-center justify-center">
+                            <i class="<?= $info['icon'] ?> text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <h3 class="text-lg font-medium text-gray-900"><?= $info['title'] ?></h3>
+                        <p class="text-sm text-gray-500 mt-1"><?= $info['description'] ?></p>
                     </div>
                 </div>
-                <div class="ml-4 flex-1">
-                    <h3 class="text-lg font-medium text-gray-900"><?= $info['title'] ?></h3>
-                    <p class="text-sm text-gray-500 mt-1"><?= $info['description'] ?></p>
+                <div class="mt-4">
+                    <button onclick="generateReport('<?= $type ?>')" class="w-full bg-<?= $info['color'] ?>-50 text-<?= $info['color'] ?>-700 px-4 py-2 rounded-md hover:bg-<?= $info['color'] ?>-100 transition-colors duration-200">
+                        Generate Report
+                    </button>
                 </div>
             </div>
-            <div class="mt-4">
-                <button onclick="generateReport('<?= $type ?>')" class="w-full bg-<?= $info['color'] ?>-50 text-<?= $info['color'] ?>-700 px-4 py-2 rounded-md hover:bg-<?= $info['color'] ?>-100 transition-colors duration-200">
-                    Generate Report
-                </button>
-            </div>
         </div>
-    </div>
     <?php endforeach; ?>
 </div>
 
@@ -58,7 +58,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="p-6">
         <!-- Search and Filter -->
         <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0 sm:space-x-4">
@@ -80,7 +80,7 @@
                 <select id="typeFilter" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                     <option value="">All Types</option>
                     <?php foreach ($report_types as $type => $info): ?>
-                    <option value="<?= $type ?>"><?= $info['title'] ?></option>
+                        <option value="<?= $type ?>"><?= $info['title'] ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -121,7 +121,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">Report Type</label>
                         <select name="report_type" id="reportType" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
                             <?php foreach ($report_types as $type => $info): ?>
-                            <option value="<?= $type ?>"><?= $info['title'] ?></option>
+                                <option value="<?= $type ?>"><?= $info['title'] ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -141,21 +141,23 @@
                     <!-- Filters -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Class</label>
-                            <select name="filters[class_id]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Class</label> <select name="filters[class_id]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
                                 <option value="">All Classes</option>
-                                <?php foreach ($classes as $class): ?>
-                                <option value="<?= $class['id'] ?>"><?= $class['name'] ?></option>
-                                <?php endforeach; ?>
+                                <?php if (isset($classes)): ?>
+                                    <?php foreach ($classes as $class): ?>
+                                        <option value="<?= $class['id'] ?>"><?= esc($class['name']) ?></option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-                            <select name="filters[subject_id]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Subject</label> <select name="filters[subject_id]" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
                                 <option value="">All Subjects</option>
-                                <?php foreach ($subjects as $subject): ?>
-                                <option value="<?= $subject['id'] ?>"><?= $subject['name'] ?></option>
-                                <?php endforeach; ?>
+                                <?php if (isset($subjects)): ?>
+                                    <?php foreach ($subjects as $subject): ?>
+                                        <option value="<?= $subject['id'] ?>"><?= esc($subject['name']) ?></option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </select>
                         </div>
                     </div>
@@ -184,7 +186,7 @@
                         <!-- Dynamic options based on report type -->
                     </div>
                 </div>
-                
+
                 <div class="mt-6 flex justify-end space-x-3">
                     <button type="button" onclick="closeGenerateModal()" class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:ring-2 focus:ring-gray-500">
                         Cancel
@@ -225,165 +227,166 @@
 <script src="https://cdn.datatables.net/1.11.5/js/dataTables.tailwindcss.min.js"></script>
 
 <script>
-let reportsTable;
+    let reportsTable;
 
-// Initialize page
-document.addEventListener('DOMContentLoaded', function() {
-    initializeReportsTable();
-    initializeEventListeners();
-});
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeReportsTable();
+        initializeEventListeners();
+    });
 
-// Initialize DataTables
-function initializeReportsTable() {
-    reportsTable = $('#reportsTable').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: {
-            url: '/admin/reports/list',
-            type: 'GET',
-            data: function(d) {
-                d.status = $('#statusFilter').val();
-                d.type = $('#typeFilter').val();
-                d.search = $('#searchReports').val();
-            }
-        },
-        columns: [
-            {
-                data: 'title',
-                render: function(data, type, row) {
-                    return `
+    // Initialize DataTables
+    function initializeReportsTable() {
+        reportsTable = $('#reportsTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: '/admin/reports/list',
+                type: 'GET',
+                data: function(d) {
+                    d.status = $('#statusFilter').val();
+                    d.type = $('#typeFilter').val();
+                    d.search = $('#searchReports').val();
+                }
+            },
+            columns: [{
+                    data: 'title',
+                    render: function(data, type, row) {
+                        return `
                         <div>
                             <div class="text-sm font-medium text-gray-900">${data}</div>
                             ${row.description ? `<div class="text-sm text-gray-500">${row.description}</div>` : ''}
                         </div>
                     `;
-                }
-            },
-            {
-                data: 'report_type',
-                render: function(data) {
-                    const types = {
-                        'exam_results': 'Exam Results',
-                        'student_performance': 'Student Performance',
-                        'exam_analytics': 'Exam Analytics',
-                        'attendance': 'Attendance',
-                        'system_usage': 'System Usage',
-                        'progress_tracking': 'Progress Tracking'
-                    };
-                    return `<span class="text-sm text-gray-900">${types[data] || data}</span>`;
-                }
-            },
-            {
-                data: 'status',
-                render: function(data) {
-                    const colors = {
-                        'pending': 'bg-yellow-100 text-yellow-800',
-                        'generating': 'bg-blue-100 text-blue-800',
-                        'completed': 'bg-green-100 text-green-800',
-                        'failed': 'bg-red-100 text-red-800',
-                        'expired': 'bg-gray-100 text-gray-800'
-                    };
-                    return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[data] || 'bg-gray-100 text-gray-800'}">${data.charAt(0).toUpperCase() + data.slice(1)}</span>`;
-                }
-            },
-            {
-                data: 'generated_by_name',
-                render: function(data) {
-                    return `<span class="text-sm text-gray-900">${data}</span>`;
-                }
-            },
-            {
-                data: 'created_at',
-                render: function(data) {
-                    return `<span class="text-sm text-gray-500">${formatDateTime(data)}</span>`;
-                }
-            },
-            {
-                data: null,
-                orderable: false,
-                render: function(data, type, row) {
-                    let actions = `
+                    }
+                },
+                {
+                    data: 'report_type',
+                    render: function(data) {
+                        const types = {
+                            'exam_results': 'Exam Results',
+                            'student_performance': 'Student Performance',
+                            'exam_analytics': 'Exam Analytics',
+                            'attendance': 'Attendance',
+                            'system_usage': 'System Usage',
+                            'progress_tracking': 'Progress Tracking'
+                        };
+                        return `<span class="text-sm text-gray-900">${types[data] || data}</span>`;
+                    }
+                },
+                {
+                    data: 'status',
+                    render: function(data) {
+                        const colors = {
+                            'pending': 'bg-yellow-100 text-yellow-800',
+                            'generating': 'bg-blue-100 text-blue-800',
+                            'completed': 'bg-green-100 text-green-800',
+                            'failed': 'bg-red-100 text-red-800',
+                            'expired': 'bg-gray-100 text-gray-800'
+                        };
+                        return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[data] || 'bg-gray-100 text-gray-800'}">${data.charAt(0).toUpperCase() + data.slice(1)}</span>`;
+                    }
+                },
+                {
+                    data: 'generated_by_name',
+                    render: function(data) {
+                        return `<span class="text-sm text-gray-900">${data}</span>`;
+                    }
+                },
+                {
+                    data: 'created_at',
+                    render: function(data) {
+                        return `<span class="text-sm text-gray-500">${formatDateTime(data)}</span>`;
+                    }
+                },
+                {
+                    data: null,
+                    orderable: false,
+                    render: function(data, type, row) {
+                        let actions = `
                         <div class="flex items-center space-x-2">
                             <button onclick="viewReportDetails(${row.id})" class="text-blue-600 hover:text-blue-900" title="View Details">
                                 <i class="fas fa-eye"></i>
                             </button>
                     `;
-                    
-                    if (row.status === 'completed') {
-                        actions += `
+
+                        if (row.status === 'completed') {
+                            actions += `
                             <button onclick="downloadReport(${row.id})" class="text-green-600 hover:text-green-900" title="Download">
                                 <i class="fas fa-download"></i>
                             </button>
                         `;
-                    }
-                    
-                    actions += `
+                        }
+
+                        actions += `
                             <button onclick="deleteReport(${row.id})" class="text-red-600 hover:text-red-900" title="Delete">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
                     `;
-                    
-                    return actions;
+
+                        return actions;
+                    }
                 }
+            ],
+            pageLength: 25,
+            order: [
+                [4, 'desc']
+            ],
+            responsive: true,
+            language: {
+                processing: "Loading reports...",
+                search: "",
+                searchPlaceholder: "Search reports...",
+                lengthMenu: "Show _MENU_ reports per page",
+                info: "Showing _START_ to _END_ of _TOTAL_ reports",
+                infoEmpty: "No reports found",
+                infoFiltered: "(filtered from _MAX_ total reports)"
             }
-        ],
-        pageLength: 25,
-        order: [[4, 'desc']],
-        responsive: true,
-        language: {
-            processing: "Loading reports...",
-            search: "",
-            searchPlaceholder: "Search reports...",
-            lengthMenu: "Show _MENU_ reports per page",
-            info: "Showing _START_ to _END_ of _TOTAL_ reports",
-            infoEmpty: "No reports found",
-            infoFiltered: "(filtered from _MAX_ total reports)"
-        }
-    });
-}
-
-// Initialize event listeners
-function initializeEventListeners() {
-    // Filter change handlers
-    $('#statusFilter, #typeFilter').on('change', function() {
-        reportsTable.ajax.reload();
-    });
-    
-    // Search input handler
-    $('#searchReports').on('keyup', function() {
-        reportsTable.ajax.reload();
-    });
-    
-    // Report type change handler
-    $('#reportType').on('change', function() {
-        updateReportOptions($(this).val());
-    });
-    
-    // Generate report form submission
-    $('#generateReportForm').on('submit', function(e) {
-        e.preventDefault();
-        processReportGeneration();
-    });
-}
-
-// Generate report
-function generateReport(reportType = null) {
-    if (reportType) {
-        $('#reportType').val(reportType);
-        updateReportOptions(reportType);
+        });
     }
-    $('#generateReportModal').removeClass('hidden');
-}
 
-// Update report options based on type
-function updateReportOptions(reportType) {
-    const optionsContainer = $('#reportOptions');
-    let optionsHtml = '';
-    
-    switch (reportType) {
-        case 'student_performance':
-            optionsHtml = `
+    // Initialize event listeners
+    function initializeEventListeners() {
+        // Filter change handlers
+        $('#statusFilter, #typeFilter').on('change', function() {
+            reportsTable.ajax.reload();
+        });
+
+        // Search input handler
+        $('#searchReports').on('keyup', function() {
+            reportsTable.ajax.reload();
+        });
+
+        // Report type change handler
+        $('#reportType').on('change', function() {
+            updateReportOptions($(this).val());
+        });
+
+        // Generate report form submission
+        $('#generateReportForm').on('submit', function(e) {
+            e.preventDefault();
+            processReportGeneration();
+        });
+    }
+
+    // Generate report
+    function generateReport(reportType = null) {
+        if (reportType) {
+            $('#reportType').val(reportType);
+            updateReportOptions(reportType);
+        }
+        $('#generateReportModal').removeClass('hidden');
+    }
+
+    // Update report options based on type
+    function updateReportOptions(reportType) {
+        const optionsContainer = $('#reportOptions');
+        let optionsHtml = '';
+
+        switch (reportType) {
+            case 'student_performance':
+                optionsHtml = `
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Options</label>
                     <div class="space-y-2">
@@ -398,9 +401,9 @@ function updateReportOptions(reportType) {
                     </div>
                 </div>
             `;
-            break;
-        case 'exam_analytics':
-            optionsHtml = `
+                break;
+            case 'exam_analytics':
+                optionsHtml = `
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Options</label>
                     <div class="space-y-2">
@@ -415,9 +418,9 @@ function updateReportOptions(reportType) {
                     </div>
                 </div>
             `;
-            break;
-        default:
-            optionsHtml = `
+                break;
+            default:
+                optionsHtml = `
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Options</label>
                     <div class="space-y-2">
@@ -432,51 +435,51 @@ function updateReportOptions(reportType) {
                     </div>
                 </div>
             `;
-    }
-    
-    optionsContainer.html(optionsHtml);
-}
-
-// Process report generation
-function processReportGeneration() {
-    const formData = new FormData($('#generateReportForm')[0]);
-    const submitButton = $('#generateReportForm button[type="submit"]');
-    
-    // Disable submit button and show loading
-    submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i>Generating...');
-    
-    fetch('/admin/reports/process-generation', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showSuccess('Report generation started successfully');
-            closeGenerateModal();
-            refreshReportsList();
-            
-            // Show progress notification
-            showProgressNotification(data.report_id);
-        } else {
-            showError(data.message || 'Failed to generate report');
         }
-    })
-    .catch(error => {
-        console.error('Error generating report:', error);
-        showError('Error generating report');
-    })
-    .finally(() => {
-        // Re-enable submit button
-        submitButton.prop('disabled', false).html('<i class="fas fa-cog mr-2"></i>Generate Report');
-    });
-}
 
-// Show progress notification
-function showProgressNotification(reportId) {
-    // This would typically integrate with a real-time notification system
-    // For now, we'll just show a simple notification
-    const notification = $(`
+        optionsContainer.html(optionsHtml);
+    }
+
+    // Process report generation
+    function processReportGeneration() {
+        const formData = new FormData($('#generateReportForm')[0]);
+        const submitButton = $('#generateReportForm button[type="submit"]');
+
+        // Disable submit button and show loading
+        submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i>Generating...');
+
+        fetch('/admin/reports/process-generation', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess('Report generation started successfully');
+                    closeGenerateModal();
+                    refreshReportsList();
+
+                    // Show progress notification
+                    showProgressNotification(data.report_id);
+                } else {
+                    showError(data.message || 'Failed to generate report');
+                }
+            })
+            .catch(error => {
+                console.error('Error generating report:', error);
+                showError('Error generating report');
+            })
+            .finally(() => {
+                // Re-enable submit button
+                submitButton.prop('disabled', false).html('<i class="fas fa-cog mr-2"></i>Generate Report');
+            });
+    }
+
+    // Show progress notification
+    function showProgressNotification(reportId) {
+        // This would typically integrate with a real-time notification system
+        // For now, we'll just show a simple notification
+        const notification = $(`
         <div id="progress-${reportId}" class="fixed top-4 right-4 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50">
             <div class="flex items-center">
                 <i class="fas fa-spinner fa-spin mr-2"></i>
@@ -487,36 +490,36 @@ function showProgressNotification(reportId) {
             </div>
         </div>
     `);
-    
-    $('body').append(notification);
-    
-    // Auto-remove after 10 seconds
-    setTimeout(() => {
-        $(`#progress-${reportId}`).fadeOut();
-    }, 10000);
-}
 
-// View report details
-function viewReportDetails(reportId) {
-    // Load report details via AJAX
-    fetch(`/admin/reports/details/${reportId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                displayReportDetails(data.report);
-            } else {
-                showError('Failed to load report details');
-            }
-        })
-        .catch(error => {
-            console.error('Error loading report details:', error);
-            showError('Error loading report details');
-        });
-}
+        $('body').append(notification);
 
-// Display report details
-function displayReportDetails(report) {
-    const content = `
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+            $(`#progress-${reportId}`).fadeOut();
+        }, 10000);
+    }
+
+    // View report details
+    function viewReportDetails(reportId) {
+        // Load report details via AJAX
+        fetch(`/admin/reports/details/${reportId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayReportDetails(data.report);
+                } else {
+                    showError('Failed to load report details');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading report details:', error);
+                showError('Error loading report details');
+            });
+    }
+
+    // Display report details
+    function displayReportDetails(report) {
+        const content = `
         <div class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -586,105 +589,105 @@ function displayReportDetails(report) {
             ` : ''}
         </div>
     `;
-    
-    $('#reportDetailsContent').html(content);
-    $('#reportDetailsModal').removeClass('hidden');
-}
 
-// Download report
-function downloadReport(reportId) {
-    window.location.href = `/admin/reports/download/${reportId}`;
-}
-
-// Delete report
-function deleteReport(reportId) {
-    if (!confirm('Are you sure you want to delete this report? This action cannot be undone.')) {
-        return;
+        $('#reportDetailsContent').html(content);
+        $('#reportDetailsModal').removeClass('hidden');
     }
-    
-    fetch(`/admin/reports/delete/${reportId}`, {
-        method: 'DELETE',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showSuccess('Report deleted successfully');
-            refreshReportsList();
-        } else {
-            showError(data.message || 'Failed to delete report');
-        }
-    })
-    .catch(error => {
-        console.error('Error deleting report:', error);
-        showError('Error deleting report');
-    });
-}
 
-// Cleanup expired reports
-function cleanupExpiredReports() {
-    if (!confirm('Are you sure you want to cleanup all expired reports? This action cannot be undone.')) {
-        return;
+    // Download report
+    function downloadReport(reportId) {
+        window.location.href = `/admin/reports/download/${reportId}`;
     }
-    
-    fetch('/admin/reports/cleanup-expired', {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
+
+    // Delete report
+    function deleteReport(reportId) {
+        if (!confirm('Are you sure you want to delete this report? This action cannot be undone.')) {
+            return;
         }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showSuccess(`${data.deleted_count} expired reports cleaned up successfully`);
-            refreshReportsList();
-        } else {
-            showError(data.message || 'Failed to cleanup expired reports');
+
+        fetch(`/admin/reports/delete/${reportId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess('Report deleted successfully');
+                    refreshReportsList();
+                } else {
+                    showError(data.message || 'Failed to delete report');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting report:', error);
+                showError('Error deleting report');
+            });
+    }
+
+    // Cleanup expired reports
+    function cleanupExpiredReports() {
+        if (!confirm('Are you sure you want to cleanup all expired reports? This action cannot be undone.')) {
+            return;
         }
-    })
-    .catch(error => {
-        console.error('Error cleaning up reports:', error);
-        showError('Error cleaning up expired reports');
-    });
-}
 
-// Refresh reports list
-function refreshReportsList() {
-    reportsTable.ajax.reload();
-}
+        fetch('/admin/reports/cleanup-expired', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess(`${data.deleted_count} expired reports cleaned up successfully`);
+                    refreshReportsList();
+                } else {
+                    showError(data.message || 'Failed to cleanup expired reports');
+                }
+            })
+            .catch(error => {
+                console.error('Error cleaning up reports:', error);
+                showError('Error cleaning up expired reports');
+            });
+    }
 
-// Close modals
-function closeGenerateModal() {
-    $('#generateReportModal').addClass('hidden');
-    $('#generateReportForm')[0].reset();
-}
+    // Refresh reports list
+    function refreshReportsList() {
+        reportsTable.ajax.reload();
+    }
 
-function closeDetailsModal() {
-    $('#reportDetailsModal').addClass('hidden');
-}
+    // Close modals
+    function closeGenerateModal() {
+        $('#generateReportModal').addClass('hidden');
+        $('#generateReportForm')[0].reset();
+    }
 
-// Utility functions
-function formatDateTime(dateTime) {
-    return new Date(dateTime).toLocaleDateString('id-ID', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
+    function closeDetailsModal() {
+        $('#reportDetailsModal').addClass('hidden');
+    }
 
-function showSuccess(message) {
-    // Implement success notification
-    console.log('Success:', message);
-}
+    // Utility functions
+    function formatDateTime(dateTime) {
+        return new Date(dateTime).toLocaleDateString('id-ID', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
 
-function showError(message) {
-    // Implement error notification
-    console.error('Error:', message);
-}
+    function showSuccess(message) {
+        // Implement success notification
+        console.log('Success:', message);
+    }
+
+    function showError(message) {
+        // Implement error notification
+        console.error('Error:', message);
+    }
 </script>
 
 <?= $this->endSection() ?>

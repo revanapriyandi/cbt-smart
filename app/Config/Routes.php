@@ -246,19 +246,21 @@ $routes->group('admin', ['filter' => 'auth:admin'], function ($routes) {
     $routes->get('results', 'Admin\AdminResultController::index');
     $routes->get('results/exam/(:num)', 'Admin\AdminResultController::examResult/$1');
     $routes->get('results/student/(:num)', 'Admin\AdminResultController::studentResult/$1');
-    $routes->get('results/export', 'Admin\AdminResultController::export');
-
-    // Analytics management
+    $routes->get('results/export', 'Admin\AdminResultController::export');    // Analytics management
     $routes->get('analytics', 'Admin\AdminAnalyticsController::index');
-    $routes->get('analytics/performance', 'Admin\AdminAnalyticsController::performance');
-    $routes->get('analytics/trends', 'Admin\AdminAnalyticsController::trends');
-    $routes->get('analytics/data', 'Admin\AdminAnalyticsController::getData');
-
-    // Reports management
+    $routes->get('analytics/dashboard-data', 'Admin\AdminAnalyticsController::getDashboardData');
+    $routes->get('analytics/exams', 'Admin\AdminAnalyticsController::examAnalytics');
+    $routes->get('analytics/exam-data', 'Admin\AdminAnalyticsController::getExamAnalyticsData');
+    $routes->get('analytics/users', 'Admin\AdminAnalyticsController::userPerformance');
+    $routes->get('analytics/user-data', 'Admin\AdminAnalyticsController::getUserPerformanceData');
+    $routes->post('analytics/export-report', 'Admin\AdminAnalyticsController::exportReport');    // Reports management
     $routes->get('reports', 'Admin\AdminReportController::index');
     $routes->get('reports/generate', 'Admin\AdminReportController::generate');
     $routes->post('reports/create', 'Admin\AdminReportController::create');
+    $routes->post('reports/process-generation', 'Admin\AdminReportController::processGeneration');
+    $routes->get('reports/list', 'Admin\AdminReportController::getReportsList');
     $routes->get('reports/download/(:segment)', 'Admin\AdminReportController::download/$1');
+    $routes->post('reports/delete/(:segment)', 'Admin\AdminReportController::delete/$1');
 });
 
 // Teacher routes

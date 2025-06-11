@@ -2,7 +2,6 @@
 
 namespace App\Controllers\Admin;
 
-use App\Controllers\BaseController;
 use App\Models\ExamModel;
 use App\Models\ExamSessionModel;
 use App\Models\ExamParticipantModel;
@@ -12,26 +11,19 @@ use App\Models\ClassModel;
 use App\Models\SubjectModel;
 use App\Models\QuestionModel;
 
-class AdminAnalyticsController extends BaseController
+class AdminAnalyticsController extends BaseAdminController
 {
-    protected $examModel;
     protected $examSessionModel;
     protected $examParticipantModel;
-    protected $examResultModel;
-    protected $userModel;
     protected $classModel;
-    protected $subjectModel;
     protected $questionModel;
 
     public function __construct()
     {
-        $this->examModel = new ExamModel();
+        parent::__construct();
         $this->examSessionModel = new ExamSessionModel();
         $this->examParticipantModel = new ExamParticipantModel();
-        $this->examResultModel = new ExamResultModel();
-        $this->userModel = new UserModel();
         $this->classModel = new ClassModel();
-        $this->subjectModel = new SubjectModel();
         $this->questionModel = new QuestionModel();
     }
 
@@ -52,27 +44,63 @@ class AdminAnalyticsController extends BaseController
                 ['title' => 'Analytics', 'url' => '/admin/analytics']
             ]
         ];
-
         return view('admin/analytics/index', $data);
     }
-
     /**
-     * Get dashboard analytics data (AJAX)
+     * Get dashboard analytics data (AJAX) with enhanced error handling
      */
     public function getDashboardData()
     {
-        if (!$this->request->isAJAX()) {
+        // Allow non-AJAX requests in development mode for testing
+        if (!$this->request->isAJAX() && ENVIRONMENT !== 'development') {
             throw new \CodeIgniter\Exceptions\PageNotFoundException();
         }
 
         try {
-            // Time period filter
-            $period = $this->request->getGet('period') ?? '30'; // days
+            // Validate period parameter
+            $period = $this->request->getGet('period') ?? '30';
+            if (!is_numeric($period) || $period < 1 || $period > 365) {
+                $period = '30'; // Default to 30 days if invalid
+            }
+
             $startDate = date('Y-m-d H:i:s', strtotime("-{$period} days"));
             $endDate = date('Y-m-d H:i:s');
 
-            // Overview Statistics
-            $overviewStats = [
+            // Get data with error handling for each component
+            $data = [
+                'overview' => $this->getOverviewStats($startDate, $endDate),
+                'exam_trends' => $this->getExamTrends($startDate, $endDate),
+                'user_activity' => $this->getUserActivity($startDate, $endDate),
+                'subject_performance' => $this->getSubjectPerformance($startDate, $endDate),
+                'class_performance' => $this->getClassPerformance($startDate, $endDate),
+                'recent_activities' => $this->getRecentActivities(20),
+                'system_health' => $this->getSystemHealthMetrics()
+            ];
+
+            return $this->response->setJSON([
+                'success' => true,
+                'data' => $data,
+                'timestamp' => date('Y-m-d H:i:s')
+            ]);
+        } catch (\Exception $e) {
+            log_message('error', 'Analytics Dashboard Error: ' . $e->getMessage());
+            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
+
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Failed to load analytics data',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Get overview statistics with error handling
+     */
+    private function getOverviewStats($startDate, $endDate)
+    {
+        try {
+            return [
                 'total_users' => $this->getTotalUsers(),
                 'total_exams' => $this->getTotalExams(),
                 'total_sessions' => $this->getTotalSessions($startDate, $endDate),
@@ -82,43 +110,18 @@ class AdminAnalyticsController extends BaseController
                 'active_sessions' => $this->getActiveSessions(),
                 'system_utilization' => $this->getSystemUtilization()
             ];
-
-            // Exam Performance Trends
-            $examTrends = $this->getExamTrends($startDate, $endDate);
-
-            // User Activity Analytics
-            $userActivity = $this->getUserActivity($startDate, $endDate);
-
-            // Subject Performance
-            $subjectPerformance = $this->getSubjectPerformance($startDate, $endDate);
-
-            // Class Performance
-            $classPerformance = $this->getClassPerformance($startDate, $endDate);
-
-            // Recent Activities
-            $recentActivities = $this->getRecentActivities(20);
-
-            // System Health Metrics
-            $systemHealth = $this->getSystemHealthMetrics();
-
-            return $this->response->setJSON([
-                'success' => true,
-                'data' => [
-                    'overview' => $overviewStats,
-                    'exam_trends' => $examTrends,
-                    'user_activity' => $userActivity,
-                    'subject_performance' => $subjectPerformance,
-                    'class_performance' => $classPerformance,
-                    'recent_activities' => $recentActivities,
-                    'system_health' => $systemHealth
-                ]
-            ]);
         } catch (\Exception $e) {
-            log_message('error', 'Error getting dashboard data: ' . $e->getMessage());
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Gagal mengambil data analytics'
-            ]);
+            log_message('error', 'Error getting overview stats: ' . $e->getMessage());
+            return [
+                'total_users' => 0,
+                'total_exams' => 0,
+                'total_sessions' => 0,
+                'total_participants' => 0,
+                'average_score' => 0,
+                'completion_rate' => 0,
+                'active_sessions' => 0,
+                'system_utilization' => 0
+            ];
         }
     }
 
@@ -321,185 +324,285 @@ class AdminAnalyticsController extends BaseController
 
     private function getTotalUsers()
     {
-        return $this->userModel->where('status', 'active')->countAllResults();
+        try {
+            return $this->userModel->where('is_active', 1)->countAllResults();
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting total users: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     private function getTotalExams()
     {
-        return $this->examModel->where('status', 'active')->countAllResults();
+        try {
+            return $this->examModel->where('is_active', 1)->countAllResults();
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting total exams: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     private function getTotalSessions($startDate, $endDate)
     {
-        return $this->examSessionModel
-            ->where('created_at >=', $startDate)
-            ->where('created_at <=', $endDate)
-            ->countAllResults();
+        try {
+            return $this->examSessionModel
+                ->where('created_at >=', $startDate)
+                ->where('created_at <=', $endDate)
+                ->countAllResults();
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting total sessions: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     private function getTotalParticipants($startDate, $endDate)
     {
-        return $this->examParticipantModel
-            ->where('created_at >=', $startDate)
-            ->where('created_at <=', $endDate)
-            ->countAllResults();
+        try {
+            return $this->examParticipantModel
+                ->where('created_at >=', $startDate)
+                ->where('created_at <=', $endDate)
+                ->countAllResults();
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting total participants: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     private function getAverageScore($startDate, $endDate)
     {
-        $result = $this->examResultModel
-            ->selectAvg('score')
-            ->where('created_at >=', $startDate)
-            ->where('created_at <=', $endDate)
-            ->where('status', 'graded')
-            ->first();
+        try {
+            $result = $this->examResultModel
+                ->selectAvg('score')
+                ->where('created_at >=', $startDate)
+                ->where('created_at <=', $endDate)
+                ->where('status', 'graded')
+                ->get()
+                ->getRowArray();
 
-        return round($result['score'] ?? 0, 2);
+            return round($result['score'] ?? 0, 2);
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting average score: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     private function getCompletionRate($startDate, $endDate)
     {
-        $total = $this->examParticipantModel
-            ->where('created_at >=', $startDate)
-            ->where('created_at <=', $endDate)
-            ->countAllResults();
+        try {
+            $total = $this->examParticipantModel
+                ->where('created_at >=', $startDate)
+                ->where('created_at <=', $endDate)
+                ->countAllResults();
 
-        $completed = $this->examParticipantModel
-            ->where('created_at >=', $startDate)
-            ->where('created_at <=', $endDate)
-            ->where('status', 'completed')
-            ->countAllResults();
+            $completed = $this->examParticipantModel
+                ->where('created_at >=', $startDate)
+                ->where('created_at <=', $endDate)
+                ->where('status', 'completed')
+                ->countAllResults();
 
-        return $total > 0 ? round(($completed / $total) * 100, 2) : 0;
+            return $total > 0 ? round(($completed / $total) * 100, 2) : 0;
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting completion rate: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     private function getActiveSessions()
     {
-        return $this->examSessionModel
-            ->where('status', 'active')
-            ->countAllResults();
+        try {
+            return $this->examSessionModel
+                ->where('status', 'active')
+                ->countAllResults();
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting active sessions: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     private function getSystemUtilization()
     {
-        // Calculate based on active sessions vs total capacity
-        $activeSessions = $this->getActiveSessions();
-        $maxCapacity = 100; // This should be configurable
+        try {
+            // Calculate based on active sessions vs total capacity
+            $activeSessions = $this->getActiveSessions();
+            $maxCapacity = 100; // This should be configurable
 
-        return $maxCapacity > 0 ? round(($activeSessions / $maxCapacity) * 100, 2) : 0;
+            return $maxCapacity > 0 ? round(($activeSessions / $maxCapacity) * 100, 2) : 0;
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting system utilization: ' . $e->getMessage());
+            return 0;
+        }
     }
-
     private function getExamTrends($startDate, $endDate)
     {
-        // Get exam statistics over time
-        $builder = $this->examSessionModel->builder();
+        try {
+            // Get exam statistics over time
+            $builder = $this->db->table('exam_sessions es');
 
-        $trends = $builder
-            ->select("DATE(created_at) as date, COUNT(*) as total_sessions, 
-                     AVG(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) * 100 as completion_rate")
-            ->where('created_at >=', $startDate)
-            ->where('created_at <=', $endDate)
-            ->groupBy('DATE(created_at)')
-            ->orderBy('date', 'ASC')
-            ->get()
-            ->getResultArray();
+            $trends = $builder
+                ->select("DATE(es.created_at) as date, COUNT(*) as total_sessions, 
+                         AVG(CASE WHEN es.status = 'completed' THEN 1 ELSE 0 END) * 100 as completion_rate")
+                ->where('es.created_at >=', $startDate)
+                ->where('es.created_at <=', $endDate)
+                ->groupBy('DATE(es.created_at)')
+                ->orderBy('date', 'ASC')
+                ->get()
+                ->getResultArray();
 
-        return $trends;
+            // Ensure data consistency
+            if (is_array($trends)) {
+                foreach ($trends as &$trend) {
+                    $trend['completion_rate'] = round((float)$trend['completion_rate'], 2);
+                }
+            }
+
+            return is_array($trends) ? $trends : [];
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting exam trends: ' . $e->getMessage());
+            return [];
+        }
     }
-
     private function getUserActivity($startDate, $endDate)
     {
-        // Get user login and exam activity
-        $builder = $this->examParticipantModel->builder();
+        try {
+            // Get user login and exam activity
+            $builder = $this->db->table('exam_participants ep');
 
-        $activity = $builder
-            ->select("users.role, DATE(exam_participants.created_at) as date, COUNT(*) as activity_count")
-            ->join('users', 'users.id = exam_participants.user_id')
-            ->where('exam_participants.created_at >=', $startDate)
-            ->where('exam_participants.created_at <=', $endDate)
-            ->groupBy(['users.role', 'DATE(exam_participants.created_at)'])
-            ->orderBy('date', 'ASC')
-            ->get()
-            ->getResultArray();
+            $activity = $builder
+                ->select("u.role, DATE(ep.created_at) as date, COUNT(*) as activity_count")
+                ->join('users u', 'u.id = ep.user_id')
+                ->where('ep.created_at >=', $startDate)
+                ->where('ep.created_at <=', $endDate)
+                ->groupBy(['u.role', 'DATE(ep.created_at)'])
+                ->orderBy('date', 'ASC')
+                ->get()
+                ->getResultArray();
 
-        return $activity;
+            return is_array($activity) ? $activity : [];
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting user activity: ' . $e->getMessage());
+            return [];
+        }
     }
-
     private function getSubjectPerformance($startDate, $endDate)
     {
-        $builder = $this->examResultModel->builder();
+        try {
+            $builder = $this->db->table('exam_results er');
 
-        $performance = $builder
-            ->select("subjects.name as subject_name, 
-                     COUNT(*) as total_attempts,
-                     AVG(exam_results.score) as average_score,
-                     MAX(exam_results.score) as highest_score,
-                     MIN(exam_results.score) as lowest_score")
-            ->join('exams', 'exams.id = exam_results.exam_id')
-            ->join('subjects', 'subjects.id = exams.subject_id')
-            ->where('exam_results.created_at >=', $startDate)
-            ->where('exam_results.created_at <=', $endDate)
-            ->where('exam_results.status', 'graded')
-            ->groupBy('subjects.id')
-            ->orderBy('average_score', 'DESC')
-            ->get()
-            ->getResultArray();
+            $performance = $builder
+                ->select("s.name as subject_name, 
+                         COUNT(*) as total_attempts,
+                         AVG(er.score) as average_score,
+                         MAX(er.score) as highest_score,
+                         MIN(er.score) as lowest_score")
+                ->join('exams e', 'e.id = er.exam_id')
+                ->join('subjects s', 's.id = e.subject_id')
+                ->where('er.created_at >=', $startDate)
+                ->where('er.created_at <=', $endDate)
+                ->where('er.status', 'graded')
+                ->groupBy('s.id')
+                ->having('total_attempts >', 0)
+                ->orderBy('average_score', 'DESC')
+                ->get()
+                ->getResultArray();
 
-        return $performance;
+            // Format numeric values
+            if (is_array($performance)) {
+                foreach ($performance as &$item) {
+                    $item['average_score'] = round((float)$item['average_score'], 2);
+                    $item['highest_score'] = round((float)$item['highest_score'], 2);
+                    $item['lowest_score'] = round((float)$item['lowest_score'], 2);
+                }
+            }
+
+            return is_array($performance) ? $performance : [];
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting subject performance: ' . $e->getMessage());
+            return [];
+        }
     }
-
     private function getClassPerformance($startDate, $endDate)
     {
-        $builder = $this->examResultModel->builder();
+        try {
+            $builder = $this->db->table('exam_results er');
 
-        $performance = $builder
-            ->select("classes.name as class_name,
-                     COUNT(*) as total_attempts,
-                     AVG(exam_results.score) as average_score,
-                     COUNT(CASE WHEN exam_results.score >= 75 THEN 1 END) as passing_count")
-            ->join('users', 'users.id = exam_results.user_id')
-            ->join('classes', 'classes.id = users.class_id')
-            ->where('exam_results.created_at >=', $startDate)
-            ->where('exam_results.created_at <=', $endDate)
-            ->where('exam_results.status', 'graded')
-            ->groupBy('classes.id')
-            ->orderBy('average_score', 'DESC')
-            ->get()
-            ->getResultArray();
+            $performance = $builder
+                ->select("c.name as class_name,
+                         COUNT(*) as total_attempts,
+                         AVG(er.score) as average_score,
+                         COUNT(CASE WHEN er.score >= 75 THEN 1 END) as passing_count")
+                ->join('users u', 'u.id = er.user_id')
+                ->join('classes c', 'c.id = u.class_id')
+                ->where('er.created_at >=', $startDate)
+                ->where('er.created_at <=', $endDate)
+                ->where('er.status', 'graded')
+                ->groupBy('c.id')
+                ->having('total_attempts >', 0)
+                ->orderBy('average_score', 'DESC')
+                ->get()
+                ->getResultArray();
 
-        return $performance;
+            // Format numeric values and calculate pass rate
+            if (is_array($performance)) {
+                foreach ($performance as &$item) {
+                    $item['average_score'] = round((float)$item['average_score'], 2);
+                    $item['pass_rate'] = $item['total_attempts'] > 0 ?
+                        round(($item['passing_count'] / $item['total_attempts']) * 100, 2) : 0;
+                }
+            }
+
+            return is_array($performance) ? $performance : [];
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting class performance: ' . $e->getMessage());
+            return [];
+        }
     }
-
     private function getRecentActivities($limit = 20)
     {
-        // This would typically come from an activity log table
-        // For now, we'll get recent exam sessions
-        $builder = $this->examSessionModel->builder();
+        try {
+            // This would typically come from an activity log table
+            // For now, we'll get recent exam sessions
+            $builder = $this->db->table('exam_sessions es');
 
-        $activities = $builder
-            ->select("exam_sessions.*, exams.title as exam_title, 
-                     users.name as created_by_name")
-            ->join('exams', 'exams.id = exam_sessions.exam_id')
-            ->join('users', 'users.id = exam_sessions.created_by')
-            ->orderBy('exam_sessions.created_at', 'DESC')
-            ->limit($limit)
-            ->get()
-            ->getResultArray();
+            $activities = $builder
+                ->select("es.*, e.title as exam_title, 
+                         u.full_name as created_by_name, es.status,
+                         es.created_at")
+                ->join('exams e', 'e.id = es.exam_id')
+                ->join('users u', 'u.id = es.created_by')
+                ->orderBy('es.created_at', 'DESC')
+                ->limit($limit)
+                ->get()
+                ->getResultArray();
 
-        return $activities;
+            return is_array($activities) ? $activities : [];
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting recent activities: ' . $e->getMessage());
+            return [];
+        }
     }
 
     private function getSystemHealthMetrics()
     {
-        // This would typically include server metrics
-        // For now, we'll return database-based health indicators
-        return [
-            'database_status' => 'healthy',
-            'active_connections' => rand(10, 50),
-            'memory_usage' => rand(40, 80),
-            'cpu_usage' => rand(20, 60),
-            'disk_usage' => rand(30, 70)
-        ];
+        try {
+            // This would typically include server metrics
+            // For now, we'll return database-based health indicators
+            return [
+                'database_status' => 'Healthy',
+                'active_connections' => rand(10, 50),
+                'memory_usage' => rand(40, 80),
+                'cpu_usage' => rand(20, 60),
+                'disk_usage' => rand(30, 70)
+            ];
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting system health metrics: ' . $e->getMessage());
+            return [
+                'database_status' => 'Unknown',
+                'active_connections' => 0,
+                'memory_usage' => 0,
+                'cpu_usage' => 0,
+                'disk_usage' => 0
+            ];
+        }
     }
 
     private function getSpecificExamAnalytics($examId)
@@ -515,12 +618,12 @@ class AdminAnalyticsController extends BaseController
         $stats = $builder
             ->select("COUNT(*) as total_attempts,
                      AVG(score) as average_score,
-                     MAX(score) as highest_score,
-                     MIN(score) as lowest_score,
+                     MAX(score) as highest_score,                     MIN(score) as lowest_score,
                      STDDEV(score) as score_deviation")
             ->where('exam_id', $examId)
             ->where('status', 'graded')
-            ->first();
+            ->get()
+            ->getRowArray();
 
         // Get score distribution
         $distribution = $builder
@@ -577,47 +680,56 @@ class AdminAnalyticsController extends BaseController
             'class_performance' => $this->getClassPerformance($startDate, $endDate)
         ];
     }
-
     private function getUserAnalytics($userId, $classId, $period)
     {
         $startDate = date('Y-m-d H:i:s', strtotime("-{$period} days"));
         $endDate = date('Y-m-d H:i:s');
 
-        $builder = $this->examResultModel->builder();
+        $builder = $this->db->table('exam_results er');
 
         if ($userId) {
-            $builder->where('user_id', $userId);
+            $builder->where('er.user_id', $userId);
         }
 
         if ($classId) {
-            $builder->join('users', 'users.id = exam_results.user_id')
-                ->where('users.class_id', $classId);
+            $builder->join('users u', 'u.id = er.user_id')
+                ->where('u.class_id', $classId);
         }
 
         $userStats = $builder
             ->select("COUNT(*) as total_exams,
-                     AVG(score) as average_score,
-                     MAX(score) as best_score,
-                     MIN(score) as lowest_score")
-            ->where('created_at >=', $startDate)
-            ->where('created_at <=', $endDate)
-            ->where('status', 'graded')
-            ->first();
+                     AVG(er.score) as average_score,
+                     MAX(er.score) as best_score,
+                     MIN(er.score) as lowest_score")
+            ->where('er.created_at >=', $startDate)
+            ->where('er.created_at <=', $endDate)
+            ->where('er.status', 'graded')
+            ->get()
+            ->getRowArray();
 
         // Get performance over time
-        $performanceTrend = $builder
-            ->select("DATE(created_at) as date, AVG(score) as average_score")
-            ->where('created_at >=', $startDate)
-            ->where('created_at <=', $endDate)
-            ->where('status', 'graded')
-            ->groupBy('DATE(created_at)')
+        $performanceBuilder = $this->db->table('exam_results er');
+        if ($userId) {
+            $performanceBuilder->where('er.user_id', $userId);
+        }
+        if ($classId && !$userId) {
+            $performanceBuilder->join('users u', 'u.id = er.user_id')
+                ->where('u.class_id', $classId);
+        }
+
+        $performanceTrend = $performanceBuilder
+            ->select("DATE(er.created_at) as date, AVG(er.score) as average_score")
+            ->where('er.created_at >=', $startDate)
+            ->where('er.created_at <=', $endDate)
+            ->where('er.status', 'graded')
+            ->groupBy('DATE(er.created_at)')
             ->orderBy('date', 'ASC')
             ->get()
             ->getResultArray();
 
         return [
-            'statistics' => $userStats,
-            'performance_trend' => $performanceTrend
+            'statistics' => is_array($userStats) ? $userStats : [],
+            'performance_trend' => is_array($performanceTrend) ? $performanceTrend : []
         ];
     }
 
